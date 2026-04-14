@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barbu — Héberger une partie</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background-color: #2d6a2d;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' mode='multiply'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E"),
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 3px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 3px
+        ),
+        radial-gradient(
+          ellipse at center,
+          #3a7d34 0%,
+          #255225 60%,
+          #1b3d1b 100%
+        );
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 50%,
+        rgba(0, 0, 0, 0.45) 100%
+      );
+    }
+
+    .carte {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      min-width: 360px;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      user-select: none;
+    }
+
+    .sous-titre {
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* ── Étape 1 : code ── */
+    .cases {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .cases input {
+      width: 3rem;
+      height: 3.8rem;
+      text-align: center;
+      font-family: Georgia, serif;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(0, 0, 0, 0.35);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      outline: none;
+      caret-color: transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .cases input:focus {
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .cases input.rempli {
+      border-color: rgba(180, 255, 180, 0.55);
+    }
+
+    /* ── Étape 2 : nombre de joueurs ── */
+    .grille-joueurs {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .nb-btn {
+      width: 3.4rem;
+      height: 3.4rem;
+      font-family: Georgia, serif;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.75);
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s, color 0.18s;
+      user-select: none;
+    }
+
+    .nb-btn:hover {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.6);
+      color: rgba(255, 255, 255, 0.95);
+      transform: translateY(-2px);
+    }
+
+    .nb-btn.selectionne {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(180, 255, 180, 0.7);
+      color: #fff;
+    }
+
+    .nb-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── Commun ── */
+    .erreur {
+      font-family: Georgia, serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      color: rgba(255, 120, 120, 0.85);
+      text-transform: uppercase;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    .boutons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.8rem;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      color: rgba(255, 255, 255, 0.85);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .btn:hover {
+      background: rgba(0, 0, 0, 0.45);
+      border-color: rgba(255, 255, 255, 0.65);
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn.primaire {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .btn.primaire:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .retour-lien {
+      font-family: Georgia, serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-top: -0.5rem;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+
+    .retour-lien:hover {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* ── Transitions entre étapes ── */
+    .etape {
+      display: contents;
+    }
+
+    .etape.masque {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="carte" id="carte">
+    <h1>Barbu</h1>
+
+    <!-- Étape 1 : définir le code -->
+    <div class="etape" id="etape1">
+      <p class="sous-titre">Définissez un code à 6 chiffres<br>pour votre partie</p>
+
+      <div class="cases" id="cases">
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+      </div>
+
+      <div class="erreur" id="erreur1"></div>
+
+      <div class="boutons">
+        <button class="btn primaire" onclick="validerCode()">Continuer</button>
+      </div>
+
+      <a class="retour-lien" href="tapis.html">← Retour</a>
+    </div>
+
+    <!-- Étape 2 : choisir le nombre de joueurs -->
+    <div class="etape masque" id="etape2">
+      <p class="sous-titre">Combien de joueurs<br>participent à la partie ?</p>
+
+      <div class="grille-joueurs" id="grilleJoueurs"></div>
+
+      <div class="erreur" id="erreur2"></div>
+
+      <div class="boutons">
+        <button class="btn primaire" onclick="validerJoueurs()">Créer la partie</button>
+      </div>
+
+      <button class="retour-lien" onclick="retourEtape1()">← Retour</button>
+    </div>
+  </div>
+
+  <script>
+    // ── État ──
+    let codePartie = '';
+    let nbJoueurs = null;
+
+    // ── Étape 1 : gestion des cases de code ──
+    const inputs = Array.from(document.querySelectorAll('.cases input'));
+    const erreur1 = document.getElementById('erreur1');
+
+    inputs.forEach((input, i) => {
+      input.addEventListener('keydown', (e) => {
+        if (
+          !/^\d$/.test(e.key) &&
+          !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+        ) {
+          e.preventDefault();
+          return;
+        }
+
+        if (e.key === 'Backspace') {
+          if (input.value === '' && i > 0) {
+            inputs[i - 1].value = '';
+            inputs[i - 1].classList.remove('rempli');
+            inputs[i - 1].focus();
+          } else {
+            input.value = '';
+            input.classList.remove('rempli');
+          }
+          e.preventDefault();
+          erreur1.textContent = '';
+        }
+
+        if (e.key === 'ArrowLeft' && i > 0) inputs[i - 1].focus();
+        if (e.key === 'ArrowRight' && i < inputs.length - 1) inputs[i + 1].focus();
+      });
+
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/\D/g, '').slice(-1);
+        erreur1.textContent = '';
+
+        if (input.value !== '') {
+          input.classList.add('rempli');
+          if (i < inputs.length - 1) inputs[i + 1].focus();
+        } else {
+          input.classList.remove('rempli');
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const texte = (e.clipboardData || window.clipboardData).getData('text');
+        const chiffres = texte.replace(/\D/g, '').slice(0, 6);
+        chiffres.split('').forEach((c, j) => {
+          if (inputs[j]) {
+            inputs[j].value = c;
+            inputs[j].classList.add('rempli');
+          }
+        });
+        const suivant = Math.min(chiffres.length, inputs.length - 1);
+        inputs[suivant].focus();
+      });
+    });
+
+    inputs[0].focus();
+
+    function validerCode() {
+      const code = inputs.map(inp => inp.value).join('');
+      if (code.length < 6) {
+        erreur1.textContent = 'Veuillez saisir les 6 chiffres du code.';
+        inputs.find(inp => inp.value === '')?.focus();
+        return;
+      }
+      codePartie = code;
+      allerEtape2();
+    }
+
+    // ── Étape 2 : sélection du nombre de joueurs ──
+    const grille = document.getElementById('grilleJoueurs');
+
+    for (let n = 3; n <= 8; n++) {
+      const btn = document.createElement('button');
+      btn.className = 'nb-btn';
+      btn.textContent = n;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nb-btn').forEach(b => b.classList.remove('selectionne'));
+        btn.classList.add('selectionne');
+        nbJoueurs = n;
+        document.getElementById('erreur2').textContent = '';
+      });
+      grille.appendChild(btn);
+    }
+
+    function validerJoueurs() {
+      if (!nbJoueurs) {
+        document.getElementById('erreur2').textContent = 'Veuillez choisir un nombre de joueurs.';
+        return;
+      }
+      window.location.href = `partie.html?code=${codePartie}&joueurs=${nbJoueurs}`;
+    }
+
+    // ── Navigation entre étapes ──
+    function allerEtape2() {
+      document.getElementById('etape1').classList.add('masque');
+      document.getElementById('etape2').classList.remove('masque');
+    }
+
+    function retourEtape1() {
+      nbJoueurs = null;
+      document.querySelectorAll('.nb-btn').forEach(b => b.classList.remove('selectionne'));
+      document.getElementById('erreur2').textContent = '';
+      document.getElementById('etape2').classList.add('masque');
+      document.getElementById('etape1').classList.remove('masque');
+      inputs[inputs.length - 1].focus();
+    }
+
+    // Valider avec Entrée selon l'étape active
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (!document.getElementById('etape1').classList.contains('masque')) {
+        validerCode();
+      } else {
+        validerJoueurs();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barbu — Partie</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background-color: #2d6a2d;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' mode='multiply'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E"),
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 3px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 3px
+        ),
+        radial-gradient(
+          ellipse at center,
+          #3a7d34 0%,
+          #255225 60%,
+          #1b3d1b 100%
+        );
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 50%,
+        rgba(0, 0, 0, 0.45) 100%
+      );
+    }
+
+    .carte {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.8rem;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      min-width: 380px;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      user-select: none;
+    }
+
+    .separateur {
+      width: 60%;
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .info-bloc {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .info-label {
+      font-family: Georgia, serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+      user-select: none;
+    }
+
+    .info-valeur {
+      font-family: Georgia, serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.3em;
+      color: rgba(255, 255, 255, 0.85);
+      user-select: none;
+    }
+
+    .code-cases {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .code-case {
+      width: 2.4rem;
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, serif;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(180, 255, 180, 0.3);
+      border-radius: 5px;
+      letter-spacing: 0;
+    }
+
+    .attente {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .attente .texte {
+      font-family: Georgia, serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Indicateurs joueurs connectés */
+    .joueurs-grille {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .joueur-jeton {
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, serif;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.3);
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    .joueur-jeton.connecte {
+      background: rgba(100, 200, 100, 0.2);
+      border-color: rgba(150, 255, 150, 0.5);
+      color: rgba(180, 255, 180, 0.85);
+    }
+
+    /* Animation de pulsation pour l'attente */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 1;   }
+    }
+
+    .point-attente {
+      display: inline-flex;
+      gap: 0.3rem;
+    }
+
+    .point-attente span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .point-attente span:nth-child(2) { animation-delay: 0.2s; }
+    .point-attente span:nth-child(3) { animation-delay: 0.4s; }
+
+    .retour-lien {
+      font-family: Georgia, serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.25);
+      text-decoration: none;
+      transition: color 0.2s;
+      margin-top: 0.5rem;
+    }
+
+    .retour-lien:hover {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    /* Page d'erreur si paramètres manquants */
+    .erreur-page {
+      font-family: Georgia, serif;
+      color: rgba(255, 120, 120, 0.8);
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="carte" id="carte">
+    <!-- Contenu injecté par JS -->
+  </div>
+
+  <script>
+    const params  = new URLSearchParams(window.location.search);
+    const code    = params.get('code');
+    const joueurs = parseInt(params.get('joueurs'), 10);
+    const carte   = document.getElementById('carte');
+
+    // Mise à jour du titre de l'onglet
+    if (code) document.title = `Barbu — Partie ${code}`;
+
+    if (!code || code.length !== 6 || isNaN(joueurs)) {
+      carte.innerHTML = `
+        <h1>Barbu</h1>
+        <p class="erreur-page">Paramètres de partie invalides.</p>
+        <a class="retour-lien" href="tapis.html">← Retour à l'accueil</a>
+      `;
+    } else {
+      // Construire les cases du code
+      const casesHTML = code.split('').map(c =>
+        `<div class="code-case">${c}</div>`
+      ).join('');
+
+      // Construire les jetons joueurs (tous grisés au départ)
+      let jetonsHTML = '';
+      for (let i = 1; i <= joueurs; i++) {
+        jetonsHTML += `<div class="joueur-jeton" id="jeton-${i}" title="Joueur ${i}">${i}</div>`;
+      }
+
+      carte.innerHTML = `
+        <h1>Barbu</h1>
+
+        <hr class="separateur" />
+
+        <div class="info-bloc">
+          <span class="info-label">Code de la partie</span>
+          <div class="code-cases">${casesHTML}</div>
+        </div>
+
+        <div class="info-bloc">
+          <span class="info-label">Joueurs attendus</span>
+          <span class="info-valeur">${joueurs}</span>
+        </div>
+
+        <hr class="separateur" />
+
+        <div class="attente" id="zoneAttente">
+          <span class="texte" id="texteAttente">En attente des joueurs</span>
+          <div class="point-attente" id="pointsAttente">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="joueurs-grille">${jetonsHTML}</div>
+        </div>
+
+        <a class="retour-lien" href="tapis.html">← Quitter la partie</a>
+      `;
+
+      // Simuler la connexion des joueurs un par un, puis démarrer
+      let connectes = 0;
+
+      function connecterProchain() {
+        if (connectes >= joueurs) return;
+        connectes++;
+        const jeton = document.getElementById(`jeton-${connectes}`);
+        if (jeton) {
+          jeton.classList.add('connecte');
+          jeton.textContent = '✓';
+        }
+
+        if (connectes < joueurs) {
+          setTimeout(connecterProchain, 500);
+        } else {
+          // Tous connectés
+          setTimeout(tousConnectes, 600);
+        }
+      }
+
+      function tousConnectes() {
+        document.getElementById('texteAttente').textContent = 'Tous les joueurs sont connectés !';
+        document.getElementById('pointsAttente').style.display = 'none';
+
+        setTimeout(() => {
+          window.location.href = `jeu.html?code=${code}&joueurs=${joueurs}`;
+        }, 800);
+      }
+
+      // Lancer la simulation avec un léger délai initial
+      setTimeout(connecterProchain, 600);
+    }
+  </script>
+</body>
+</html>
