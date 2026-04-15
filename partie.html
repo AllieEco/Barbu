@@ -222,9 +222,165 @@
       text-transform: uppercase;
       text-align: center;
     }
+
+    /* ── Overlay saisie du pseudo ── */
+    .pseudo-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s;
+    }
+
+    .pseudo-overlay.masque {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .pseudo-carte {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      padding: 2.5rem 3rem;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      min-width: 320px;
+    }
+
+    .pseudo-carte h2 {
+      font-family: Georgia, serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      user-select: none;
+    }
+
+    .pseudo-carte p {
+      font-family: Georgia, serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      user-select: none;
+    }
+
+    .pseudo-input-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .pseudo-input {
+      width: 100%;
+      font-family: Georgia, serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.1em;
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      background: rgba(0,0,0,0.4);
+      border: 2px solid rgba(255,255,255,0.25);
+      border-radius: 7px;
+      padding: 0.65rem 2.5rem 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .pseudo-input:focus { border-color: rgba(255,255,255,0.7); }
+    .pseudo-input.erreur-input { border-color: rgba(255,100,100,0.7); }
+
+    .pseudo-compteur {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.25);
+      pointer-events: none;
+    }
+
+    .pseudo-erreur {
+      font-family: Georgia, serif;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,110,110,0.85);
+      min-height: 1em;
+      text-align: center;
+    }
+
+    .pseudo-btn {
+      font-family: Georgia, serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.7rem 2rem;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .pseudo-btn:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.8);
+      transform: translateY(-2px);
+    }
+
+    .pseudo-btn:active { transform: translateY(0); }
+
+    /* Jeton avec pseudo */
+    .joueur-jeton {
+      flex-direction: column;
+      gap: 0.15rem;
+      width: auto;
+      min-width: 2.8rem;
+      padding: 0 0.4rem;
+      height: auto;
+      min-height: 2.8rem;
+    }
+
+    .jeton-pseudo {
+      font-size: 0.6rem;
+      letter-spacing: 0.05em;
+      max-width: 70px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: none;
+    }
+
+    .joueur-jeton.connecte .jeton-pseudo { display: block; }
+    .joueur-jeton.connecte .jeton-num    { display: none; }
   </style>
 </head>
 <body>
+  <!-- Overlay pseudo -->
+  <div class="pseudo-overlay" id="pseudoOverlay">
+    <div class="pseudo-carte">
+      <h2>Votre pseudo</h2>
+      <p>Choisissez un nom pour cette partie</p>
+      <div class="pseudo-input-wrap">
+        <input class="pseudo-input" id="pseudoInput" type="text" maxlength="10"
+               placeholder="Ex : Alice" autocomplete="off" />
+        <span class="pseudo-compteur" id="pseudoCompteur">0/10</span>
+      </div>
+      <div class="pseudo-erreur" id="pseudoErreur"></div>
+      <button class="pseudo-btn" onclick="validerPseudo()">Entrer dans la partie</button>
+    </div>
+  </div>
+
   <div class="carte" id="carte">
     <!-- Contenu injecté par JS -->
   </div>
@@ -234,47 +390,45 @@
     const params  = new URLSearchParams(window.location.search);
     const code    = params.get('code');
     const joueurs = parseInt(params.get('joueurs'), 10);
+    const role    = params.get('role') || 'hote';
     const carte   = document.getElementById('carte');
 
-    // Mise à jour du titre de l'onglet
     if (code) document.title = `Barbu — Partie ${code}`;
 
     if (!code || code.length !== 6 || isNaN(joueurs)) {
+      document.getElementById('pseudoOverlay').style.display = 'none';
       carte.innerHTML = `
         <h1>Barbu</h1>
         <p class="erreur-page">Paramètres de partie invalides.</p>
         <a class="retour-lien" href="tapis.html">← Retour à l'accueil</a>
       `;
-    // Pas de socket pour la page d'erreur
     } else {
-      // Construire les cases du code
+      // ── Salle d'attente ────────────────────────────────────────────
       const casesHTML = code.split('').map(c =>
         `<div class="code-case">${c}</div>`
       ).join('');
 
-      // Construire les jetons joueurs (tous grisés au départ)
       let jetonsHTML = '';
       for (let i = 1; i <= joueurs; i++) {
-        jetonsHTML += `<div class="joueur-jeton" id="jeton-${i}" title="Joueur ${i}">${i}</div>`;
+        jetonsHTML += `
+          <div class="joueur-jeton" id="jeton-${i}">
+            <span class="jeton-num">${i}</span>
+            <span class="jeton-pseudo"></span>
+          </div>`;
       }
 
       carte.innerHTML = `
         <h1>Barbu</h1>
-
         <hr class="separateur" />
-
         <div class="info-bloc">
           <span class="info-label">Code de la partie</span>
           <div class="code-cases">${casesHTML}</div>
         </div>
-
         <div class="info-bloc">
           <span class="info-label">Joueurs attendus</span>
           <span class="info-valeur">${joueurs}</span>
         </div>
-
         <hr class="separateur" />
-
         <div class="attente" id="zoneAttente">
           <span class="texte" id="texteAttente">En attente des joueurs</span>
           <div class="point-attente" id="pointsAttente">
@@ -282,43 +436,87 @@
           </div>
           <div class="joueurs-grille">${jetonsHTML}</div>
         </div>
-
         <a class="retour-lien" href="tapis.html">← Quitter la partie</a>
       `;
 
-      // ── Socket.io ──────────────────────────────────────────────────
-      const socket = io();
-      const role   = params.get('role') || 'hote';
+      // ── Gestion du pseudo ──────────────────────────────────────────
+      const pseudoInput    = document.getElementById('pseudoInput');
+      const pseudoErreur   = document.getElementById('pseudoErreur');
+      const pseudoCompteur = document.getElementById('pseudoCompteur');
+      const pseudoOverlay  = document.getElementById('pseudoOverlay');
 
-      if (role === 'hote') {
-        socket.emit('creer_partie', { code, joueurs });
-      } else {
-        socket.emit('rejoindre_partie', { code });
+      pseudoInput.focus();
+
+      pseudoInput.addEventListener('input', () => {
+        const n = pseudoInput.value.length;
+        pseudoCompteur.textContent = `${n}/10`;
+        pseudoCompteur.style.color = n >= 10 ? 'rgba(255,180,80,0.7)' : 'rgba(255,255,255,0.25)';
+        pseudoErreur.textContent = '';
+        pseudoInput.classList.remove('erreur-input');
+      });
+
+      pseudoInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') window.validerPseudo();
+      });
+
+      window.validerPseudo = function() {
+        const pseudo = pseudoInput.value.trim();
+        if (!pseudo) {
+          pseudoErreur.textContent = 'Veuillez entrer un pseudo.';
+          pseudoInput.classList.add('erreur-input');
+          pseudoInput.focus();
+          return;
+        }
+
+        // Masquer l'overlay et connecter le socket
+        pseudoOverlay.classList.add('masque');
+        setTimeout(() => pseudoOverlay.style.display = 'none', 300);
+
+        connecterSocket(pseudo);
       }
 
-      // Mise à jour des jetons à chaque connexion
-      socket.on('maj_joueurs', ({ connectes }) => {
-        for (let n = 1; n <= connectes; n++) {
-          const j = document.getElementById(`jeton-${n}`);
-          if (j) { j.classList.add('connecte'); j.textContent = '✓'; }
+      // ── Socket.io ──────────────────────────────────────────────────
+      function connecterSocket(pseudo) {
+        // Sauvegarder le pseudo pour jeu.html
+        sessionStorage.setItem('barbu_pseudo', pseudo);
+
+        const socket = io();
+
+        if (role === 'hote') {
+          socket.emit('creer_partie', { code, joueurs, pseudo });
+        } else {
+          socket.emit('rejoindre_partie', { code, pseudo });
         }
-      });
 
-      // Tous connectés → lancement de la partie
-      socket.on('tous_connectes', ({ code: c, joueurs: nb }) => {
-        document.getElementById('texteAttente').textContent = 'Tous les joueurs sont connectés !';
-        document.getElementById('pointsAttente').style.display = 'none';
-        setTimeout(() => {
-          window.location.href = `jeu.html?code=${c}&joueurs=${nb}`;
-        }, 800);
-      });
+        // Mise à jour des jetons avec les pseudos
+        socket.on('maj_joueurs', ({ pseudos }) => {
+          pseudos.forEach((p, i) => {
+            const jeton = document.getElementById(`jeton-${i + 1}`);
+            if (jeton && p) {
+              jeton.classList.add('connecte');
+              jeton.querySelector('.jeton-pseudo').textContent = p;
+              jeton.title = p;
+            }
+          });
+        });
 
-      // Erreur (partie pleine, introuvable…)
-      socket.on('erreur_partie', ({ message }) => {
-        document.getElementById('texteAttente').textContent = message;
-        document.getElementById('pointsAttente').style.display = 'none';
-      });
+        // Tous connectés → lancement
+        socket.on('tous_connectes', ({ code: c, joueurs: nb, pseudos }) => {
+          document.getElementById('texteAttente').textContent = 'Tous les joueurs sont connectés !';
+          document.getElementById('pointsAttente').style.display = 'none';
+          sessionStorage.setItem('barbu_pseudos', JSON.stringify(pseudos));
+          setTimeout(() => {
+            window.location.href = `jeu.html?code=${c}&joueurs=${nb}`;
+          }, 800);
+        });
+
+        socket.on('erreur_partie', ({ message }) => {
+          document.getElementById('texteAttente').textContent = message;
+          document.getElementById('pointsAttente').style.display = 'none';
+        });
+      }
     }
+
   </script>
 </body>
 </html>
