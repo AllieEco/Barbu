@@ -929,12 +929,11 @@
 
   <script>
     // ── Responsive : facteur d'échelle calculé une fois au chargement ──
-    // La scène "pleine taille" fait 1180 × 860 px (table + espace pour les piles)
-    const _MAX_SW = 1180, _MAX_SH = 860;
+    // Cible : la table (860×500 px à scale=1) occupe ~75 % de la largeur
+    // et ~72 % de la hauteur. Pas de plafond : agrandit sur les grands écrans.
     const scale = Math.min(
-      (window.innerWidth  * 0.98) / _MAX_SW,
-      (window.innerHeight * 0.95) / _MAX_SH,
-      1
+      window.innerWidth  * 0.75 / 860,
+      window.innerHeight * 0.72 / 500
     );
     const _root = document.documentElement;
     _root.style.setProperty('--tw', (860 * scale) + 'px');
@@ -993,10 +992,10 @@
 
     // ── Positionnement des tas autour de la table ────────────────────
     const scene    = document.getElementById('scene');
-    const ORBIT_RX = (780 / 2 + 140) * scale;
-    const ORBIT_RY = (420 / 2 + 140) * scale;
-    const SCENE_W  = ORBIT_RX * 2 + 120 * scale;
-    const SCENE_H  = ORBIT_RY * 2 + 160 * scale;
+    const ORBIT_RX = (780 / 2 + 130) * scale; // marge horizontale pour les piles
+    const ORBIT_RY = (420 / 2 + 80)  * scale; // marge verticale réduite
+    const SCENE_W  = ORBIT_RX * 2 + 110 * scale;
+    const SCENE_H  = ORBIT_RY * 2 + 110 * scale;
     scene.style.width  = SCENE_W + 'px';
     scene.style.height = SCENE_H + 'px';
 
