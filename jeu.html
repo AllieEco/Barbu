@@ -631,6 +631,20 @@
       text-shadow: 0 0 30px rgba(160,40,200,0.5);
     }
 
+    .contrat-titre-nouveau.chaos {
+      background: linear-gradient(90deg, #ff4444, #ffd044, #b044e0, #ff4444);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: chaos-gradient 2s linear infinite, battement 1.4s ease-in-out infinite;
+    }
+
+    @keyframes chaos-gradient {
+      0%   { background-position: 0%   50%; }
+      100% { background-position: 300% 50%; }
+    }
+
     /* ── Overlay "Roi de Cœur capturé" ── */
     .roi-overlay {
       position: fixed;
@@ -1102,12 +1116,13 @@
     });
 
     // ── Fonction générique d'affichage de l'overlay de transition ────
-    function afficherTransition({ titreFin, titreNouveau, sousTitre, scores: sc, pseudos: ps, classeDames = false }) {
+    function afficherTransition({ titreFin, titreNouveau, sousTitre, scores: sc, pseudos: ps, classeDames = false, classChaos = false }) {
       document.getElementById('contratTitreFin').textContent    = titreFin;
       document.getElementById('contratSous').textContent        = sousTitre;
       const titreEl = document.getElementById('contratTitreNouveau');
       titreEl.textContent = titreNouveau;
-      titreEl.className   = 'contrat-titre-nouveau' + (classeDames ? ' dames' : '');
+      const extra = classChaos ? ' chaos' : classeDames ? ' dames' : '';
+      titreEl.className   = 'contrat-titre-nouveau' + extra;
 
       document.getElementById('contratScores').innerHTML = sc
         .map((pts, i) => `
@@ -1176,6 +1191,7 @@
       document.getElementById('tableSous').textContent = `Partie · ${code} — ${sousTitre}`;
       document.querySelectorAll('.badge-commence').forEach(b => b.remove());
       document.getElementById('contratOverlay').classList.remove('visible');
+      document.getElementById('roiOverlay').classList.remove('visible');
 
       piles.forEach(p => p.classList.remove('actif', 'pile-active'));
       let courantAnim = 0, toursAnim = 0;
@@ -1255,35 +1271,71 @@
       });
     });
 
-    // ── Capture spectaculaire du Roi de Cœur ─────────────────────────
-    socket.on('roi_coeur_pris', ({ nom, points }) => {
-      // Bloquer les interactions
-      piles.forEach(p => p.classList.remove('pile-active'));
-      indicateur.textContent = 'Contrat fermé !';
-      indicateur.className   = 'tour-indicateur attente';
-      fermerMain();
+    // ── Transition vers le contrat 5 — Chaos ─────────────────────────
+    socket.on('fin_contrat_4', ({ scores: sc, pseudos: ps }) => {
+      afficherTransition({
+        titreFin:    'Fin du Contrat 4 — Ne prenez pas le Roi de Cœur !',
+        titreNouveau:'🔥 Contrat 5 · Chaos ! 🔥',
+        sousTitre:   'Plis (×4) + Cœurs (×6) + Dames (×12) + Roi de Cœur (52) — tout compte !',
+        scores: sc, pseudos: ps,
+        classeDames: false, classChaos: true
+      });
+    });
 
+    socket.on('votre_main_contrat5', data => recevoirNouvelleMain(data));
+    socket.on('debut_contrat_5', ({ joueurCommence }) => {
+      demarrerContrat({
+        numContrat:    5,
+        joueurCommence,
+        sousTitre:     'Chaos — tout compte !',
+        annonceTexte:  'Chaos — bonne chance !'
+      });
+    });
+
+    // ── Capture spectaculaire du Roi de Cœur ─────────────────────────
+    socket.on('roi_coeur_pris', ({ nom, points, ferme }) => {
       document.getElementById('roiJoueur').textContent = nom;
       document.getElementById('roiPoints').textContent = `hérite de ${points} points`;
       document.getElementById('roiOverlay').classList.add('visible');
+
+      if (ferme) {
+        // Contrat 4 : le roi ferme le contrat, on bloque les interactions
+        piles.forEach(p => p.classList.remove('pile-active'));
+        indicateur.textContent = 'Contrat fermé !';
+        indicateur.className   = 'tour-indicateur attente';
+        fermerMain();
+      } else {
+        // Contrat 5 Chaos : le roi ne ferme pas, l'overlay disparaît après 3 s
+        setTimeout(() => {
+          document.getElementById('roiOverlay').classList.remove('visible');
+        }, 3000);
+      }
     });
 
-    socket.on('partie_terminee', ({ scores, scoresContrat1, scoresContrat2, scoresContrat3, pseudos: ps }) => {
-      // Masquer l'overlay roi si visible
+    socket.on('partie_terminee', ({ scores, scoresContrat1, scoresContrat2, scoresContrat3, scoresContrat4, pseudos: ps }) => {
       document.getElementById('roiOverlay').classList.remove('visible');
+      document.getElementById('contratOverlay').classList.remove('visible');
 
       const lignes = scores
         .map((total, i) => {
           const c1 = scoresContrat1 ? scoresContrat1[i] : 0;
           const c2 = scoresContrat2 ? scoresContrat2[i] - c1 : 0;
           const c3 = scoresContrat3 ? scoresContrat3[i] - (scoresContrat2 ? scoresContrat2[i] : 0) : 0;
-          const c4 = total - (scoresContrat3 ? scoresContrat3[i] : 0);
-          return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3, c4 };
+          const c4 = scoresContrat4 ? scoresContrat4[i] - (scoresContrat3 ? scoresContrat3[i] : 0) : 0;
+          const c5 = total - (scoresContrat4 ? scoresContrat4[i] : scoresContrat3 ? scoresContrat3[i] : 0);
+          return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3, c4, c5 };
         })
         .sort((a, b) => b.total - a.total)
-        .map((j, rang) =>
-          `${rang + 1}. ${j.nom} — ${j.total} pts\n   Plis: ${j.c1} · Cœurs: ${j.c2} · Dames: ${j.c3} · Roi: ${j.c4}`
-        )
+        .map((j, rang) => {
+          const detail = [
+            scoresContrat1 ? `Plis: ${j.c1}` : null,
+            scoresContrat2 ? `Cœurs: ${j.c2}` : null,
+            scoresContrat3 ? `Dames: ${j.c3}` : null,
+            scoresContrat4 ? `Roi: ${j.c4}` : null,
+            `Chaos: ${j.c5}`
+          ].filter(Boolean).join(' · ');
+          return `${rang + 1}. ${j.nom} — ${j.total} pts\n   ${detail}`;
+        })
         .join('\n\n');
 
       indicateur.textContent = 'Partie terminée !';

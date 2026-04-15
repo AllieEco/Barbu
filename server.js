@@ -138,11 +138,12 @@ io.on('connection', socket => {
         pliActuel:     [],
         suitePli:      null,
         scores:        new Array(p.joueurs).fill(0),
-        contrat:       1,   // 1=plis(×4) 2=cœurs(×6) 3=dames(×12) 4=roi de cœur(52)
+        contrat:       1,   // 1=plis(×4) 2=cœurs(×6) 3=dames(×12) 4=roi(52) 5=chaos
         scoresC1:      null,
         scoresC2:      null,
         scoresC3:      null,
-        damesPrises:   0    // compteur pour fermeture anticipée du contrat 3
+        scoresC4:      null,
+        damesPrises:   0    // compteur pour fermeture anticipée C3 et C5
       };
 
       setTimeout(() => {
@@ -226,8 +227,8 @@ io.on('connection', socket => {
       }
 
       // ── Score selon le contrat ───────────────────────────────────────
-      let pointsPli     = 0;
-      let roiCoeurPris  = false; // uniquement pertinent pour le contrat 4
+      let pointsPli    = 0;
+      let roiCoeurPris = false;
 
       if (jeu.contrat === 1) {
         pointsPli = 4;
@@ -238,10 +239,16 @@ io.on('connection', socket => {
         const nbDames = jeu.pliActuel.filter(e => e.carte.rank === 'Q').length;
         pointsPli = nbDames * 12;
         jeu.damesPrises += nbDames;
-      } else {
-        // Contrat 4 : le roi de cœur vaut 52 points, ferme le contrat
+      } else if (jeu.contrat === 4) {
         roiCoeurPris = jeu.pliActuel.some(e => e.carte.rank === 'K' && e.carte.suit === '♥');
         pointsPli    = roiCoeurPris ? 52 : 0;
+      } else {
+        // Contrat 5 — Chaos : toutes les règles cumulées
+        const nbCoeurs = jeu.pliActuel.filter(e => e.carte.suit === '♥').length;
+        const nbDames  = jeu.pliActuel.filter(e => e.carte.rank === 'Q').length;
+        roiCoeurPris   = jeu.pliActuel.some(e => e.carte.rank === 'K' && e.carte.suit === '♥');
+        pointsPli = 4 + nbCoeurs * 6 + nbDames * 12 + (roiCoeurPris ? 52 : 0);
+        jeu.damesPrises += nbDames;
       }
       jeu.scores[gagnant] += pointsPli;
 
@@ -254,7 +261,7 @@ io.on('connection', socket => {
       const finContrat =
         jeu.contrat === 3 ? jeu.damesPrises >= 4 || jeu.mains[0].length === 0 :
         jeu.contrat === 4 ? roiCoeurPris           || jeu.mains[0].length === 0 :
-        jeu.mains[0].length === 0;
+        jeu.mains[0].length === 0; // C1, C2, C5 : on joue jusqu'au bout
 
       setTimeout(() => {
         io.to(code).emit('pli_termine', { gagnant, scores: jeu.scores, pointsPli });
@@ -372,9 +379,44 @@ io.on('connection', socket => {
               }, 5000);
             }, 1500);
 
+          } else if (jeu.contrat === 4) {
+            // Transition vers le contrat 5 — Chaos
+            jeu.scoresC4 = [...jeu.scores];
+            console.log(`[Jeu] ${code} : fin contrat 4 → transition vers contrat 5 (chaos)`);
+
+            const lancerTransitionC5 = () => {
+              io.to(code).emit('fin_contrat_4', { scores: jeu.scoresC4, pseudos: jeu.pseudos });
+              setTimeout(() => {
+                const nbJ = jeu.socketIds.length;
+                const { mains: nouvellesMains, retirees: nouvRetirees, parJoueur: nouvParJoueur } = distribuerCartes(nbJ);
+                const joueurCommence = Math.floor(Math.random() * nbJ);
+                jeu.mains         = nouvellesMains;
+                jeu.contrat       = 5;
+                jeu.pliActuel     = [];
+                jeu.suitePli      = null;
+                jeu.joueurCourant = joueurCommence;
+                jeu.socketIds.forEach((socketId, i) => {
+                  io.to(socketId).emit('votre_main_contrat5', {
+                    main: nouvellesMains[i],
+                    retirees: nouvRetirees,
+                    parJoueur: nouvParJoueur
+                  });
+                });
+                io.to(code).emit('debut_contrat_5', { joueurCommence, retirees: nouvRetirees, parJoueur: nouvParJoueur });
+                console.log(`[Jeu] ${code} : contrat 5 lancé — commence : ${jeu.pseudos[joueurCommence]}`);
+              }, 5000);
+            };
+
+            if (roiCoeurPris) {
+              io.to(code).emit('roi_coeur_pris', { gagnant, nom: jeu.pseudos[gagnant], points: 52, ferme: true });
+              setTimeout(lancerTransitionC5, 3000); // laisser le temps à l'overlay roi
+            } else {
+              setTimeout(lancerTransitionC5, 1500);
+            }
+
           } else {
-            // Fin complète de la partie (contrat 4 terminé)
-            console.log(`[Jeu] ${code} : partie terminée — roi pris : ${roiCoeurPris}`);
+            // Fin complète de la partie (contrat 5 — Chaos — terminé)
+            console.log(`[Jeu] ${code} : partie terminée (fin du chaos) — roi pris : ${roiCoeurPris}`);
 
             const emitFin = () => {
               io.to(code).emit('partie_terminee', {
@@ -382,18 +424,14 @@ io.on('connection', socket => {
                 scoresContrat1: jeu.scoresC1,
                 scoresContrat2: jeu.scoresC2,
                 scoresContrat3: jeu.scoresC3,
+                scoresContrat4: jeu.scoresC4,
                 pseudos:        jeu.pseudos
               });
               delete jeux[code];
             };
 
             if (roiCoeurPris) {
-              // Annoncer d'abord la capture spectaculaire du roi, puis fermer
-              io.to(code).emit('roi_coeur_pris', {
-                gagnant,
-                nom: jeu.pseudos[gagnant],
-                points: 52
-              });
+              io.to(code).emit('roi_coeur_pris', { gagnant, nom: jeu.pseudos[gagnant], points: 52, ferme: false });
               setTimeout(emitFin, 4000);
             } else {
               emitFin();
