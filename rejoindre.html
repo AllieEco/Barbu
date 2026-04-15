@@ -312,6 +312,11 @@
 
     inputs[0].focus();
 
+    function afficherErreur(msg) {
+      feedback.textContent = msg;
+      feedback.className = 'feedback erreur';
+    }
+
     function reinitialiserFeedback() {
       feedback.textContent = '';
       feedback.className = 'feedback';
@@ -320,47 +325,49 @@
       btnRejoindre.textContent = 'Rejoindre';
     }
 
-    // ── Vérification du code ─────────────────────────────────────────
-    function verifierCode() {
-      // Si la partie a déjà été trouvée, on confirme l'entrée
-      if (partieEnCours) {
-        confirmerEntree();
-        return;
-      }
+    // ── Vérification du code via le serveur ─────────────────────────
+    async function verifierCode() {
+      if (partieEnCours) { confirmerEntree(); return; }
 
       const code = inputs.map(inp => inp.value).join('');
-
       if (code.length < 6) {
         afficherErreur('Veuillez saisir les 6 chiffres du code.');
         inputs.find(inp => inp.value === '')?.focus();
         return;
       }
 
-      // Chercher dans le stockage local
-      const parties = JSON.parse(localStorage.getItem('barbu_parties') || '{}');
-      const partie  = parties[code];
+      btnRejoindre.disabled = true;
 
-      if (!partie) {
-        // Partie introuvable
-        inputs.forEach(inp => inp.classList.add('erreur-case'));
-        afficherErreur('Aucune partie trouvée avec ce code.');
-        setTimeout(() => inputs.forEach(inp => inp.classList.remove('erreur-case')), 600);
-        return;
+      try {
+        const res    = await fetch(`/api/partie/${code}`);
+        const donnee = await res.json();
+
+        if (!donnee.existe) {
+          inputs.forEach(inp => inp.classList.add('erreur-case'));
+          afficherErreur('Aucune partie trouvée avec ce code.');
+          setTimeout(() => inputs.forEach(inp => inp.classList.remove('erreur-case')), 600);
+          btnRejoindre.disabled = false;
+          return;
+        }
+
+        // Partie trouvée
+        partieEnCours = { code, joueurs: donnee.joueurs };
+        const restants = donnee.joueurs - donnee.connectes;
+        infoJoueurs.textContent = `${donnee.joueurs} joueurs · ${donnee.connectes} déjà connecté${donnee.connectes > 1 ? 's' : ''} · ${restants} place${restants > 1 ? 's' : ''} libre${restants > 1 ? 's' : ''}`;
+        infoPartie.classList.add('visible');
+        feedback.textContent = 'Partie trouvée !';
+        feedback.className = 'feedback succes';
+        btnRejoindre.textContent = 'Confirmer et rejoindre';
+        btnRejoindre.disabled = false;
+
+      } catch (e) {
+        afficherErreur('Impossible de contacter le serveur.');
+        btnRejoindre.disabled = false;
       }
-
-      // Partie trouvée — afficher les infos et demander confirmation
-      partieEnCours = { code, ...partie };
-      const nb = partie.joueurs;
-      infoJoueurs.textContent = `${nb} joueur${nb > 1 ? 's' : ''}`;
-      infoPartie.classList.add('visible');
-      feedback.textContent = 'Partie trouvée !';
-      feedback.className = 'feedback succes';
-      btnRejoindre.textContent = 'Confirmer et rejoindre';
     }
 
     function confirmerEntree() {
       const { code, joueurs } = partieEnCours;
-      // TODO : notifier le serveur qu'un joueur rejoint
       window.location.href = `partie.html?code=${code}&joueurs=${joueurs}&role=joueur`;
     }
 
