@@ -14,6 +14,11 @@ const parties = {};
 // ── Fichiers statiques ───────────────────────────────────────────────
 app.use(express.static(path.join(__dirname)));
 
+// Rediriger la racine vers tapis.html
+app.get('/', (req, res) => {
+  res.redirect('/tapis.html');
+});
+
 // ── API REST : vérifier si une partie existe ─────────────────────────
 app.get('/api/partie/:code', (req, res) => {
   const p = parties[req.params.code];
