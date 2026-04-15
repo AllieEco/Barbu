@@ -445,47 +445,17 @@
     document.title = `Barbu — Partie ${code}`;
     document.getElementById('tableSous').textContent = `Partie · ${code}`;
 
-    // ── Constantes ───────────────────────────────────────────────────
-    const SUITS = ['♥', '♦', '♣', '♠'];
-    const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-    const ROUGE = new Set(['♥','♦']);
+    // ── Constantes de tri ────────────────────────────────────────────
     const ORDRE_SUIT = { '♠':0, '♥':1, '♦':2, '♣':3 };
     const ORDRE_RANK = { '2':0,'3':1,'4':2,'5':3,'6':4,'7':5,'8':6,'9':7,'10':8,'J':9,'Q':10,'K':11,'A':12 };
 
-    // ── Génération et distribution du jeu ───────────────────────────
-    const aRetirer  = 52 % nbJoueurs;
-    const parJoueur = Math.floor(52 / nbJoueurs);
+    // ── Récupérer les données distribuées par le serveur ────────────
+    const mainBrute  = JSON.parse(sessionStorage.getItem('barbu_main')     || '[]');
+    const retirees   = JSON.parse(sessionStorage.getItem('barbu_retirees') || '[]');
+    const parJoueur  = parseInt(sessionStorage.getItem('barbu_par_joueur') ?? Math.floor(52 / nbJoueurs), 10);
 
-    // Jeu complet
-    const jeuComplet = [];
-    for (const rank of RANKS)
-      for (const suit of SUITS)
-        jeuComplet.push({ rank, suit, rouge: ROUGE.has(suit) });
-
-    // Retirer les cartes (plus petites, rouges en priorité)
-    const retirees = [];
-    let count = 0;
-    outer: for (const rank of RANKS) {
-      for (const suit of SUITS) {
-        if (count >= aRetirer) break outer;
-        const idx = jeuComplet.findIndex(c => c.rank === rank && c.suit === suit);
-        if (idx !== -1) { retirees.push(jeuComplet.splice(idx, 1)[0]); count++; }
-      }
-    }
-
-    // Mélanger (Fisher-Yates)
-    for (let i = jeuComplet.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [jeuComplet[i], jeuComplet[j]] = [jeuComplet[j], jeuComplet[i]];
-    }
-
-    // Distribuer une main par joueur
-    const mains = Array.from({ length: nbJoueurs }, (_, i) =>
-      jeuComplet.slice(i * parJoueur, (i + 1) * parJoueur)
-    );
-
-    // Trier la main du joueur local : ♠ ♥ ♦ ♣ puis rang croissant
-    mains[0].sort((a, b) =>
+    // Trier la main : ♠ ♥ ♦ ♣ puis rang croissant
+    const maMain = [...mainBrute].sort((a, b) =>
       ORDRE_SUIT[a.suit] !== ORDRE_SUIT[b.suit]
         ? ORDRE_SUIT[a.suit] - ORDRE_SUIT[b.suit]
         : ORDRE_RANK[a.rank] - ORDRE_RANK[b.rank]
@@ -501,10 +471,10 @@
     }
 
     // ── Overlay : afficher la main ───────────────────────────────────
-    const overlay     = document.getElementById('mainOverlay');
+    const overlay      = document.getElementById('mainOverlay');
     const mainCartesEl = document.getElementById('mainCartes');
 
-    mains[0].forEach(carte => {
+    maMain.forEach(carte => {
       const div = document.createElement('div');
       div.className = 'carte-face ' + (carte.rouge ? 'rouge' : 'noir');
       div.innerHTML = `
@@ -540,18 +510,21 @@
     scene.style.width  = SCENE_W + 'px';
     scene.style.height = SCENE_H + 'px';
 
-    // Récupérer les pseudos sauvegardés depuis la salle d'attente
-    const pseudos = JSON.parse(sessionStorage.getItem('barbu_pseudos') || '[]');
+    // Récupérer les pseudos et le numéro du joueur local
+    const pseudos   = JSON.parse(sessionStorage.getItem('barbu_pseudos') || '[]');
+    const monIndex  = parseInt(sessionStorage.getItem('barbu_mon_numero') ?? '0', 10);
     const nomJoueur = i => pseudos[i] || `Joueur ${i + 1}`;
 
     const piles = [];
 
     for (let i = 0; i < nbJoueurs; i++) {
-      const angle    = (2 * Math.PI * i / nbJoueurs) + Math.PI / 2;
+      // Décaler la position visuelle pour que le joueur local soit toujours en bas
+      const posVisuelle = (i - monIndex + nbJoueurs) % nbJoueurs;
+      const angle    = (2 * Math.PI * posVisuelle / nbJoueurs) + Math.PI / 2;
       const x        = SCENE_W / 2 + ORBIT_RX * Math.cos(angle);
       const y        = SCENE_H / 2 + ORBIT_RY * Math.sin(angle);
-      const estLocal = i === 0;
-      const label    = estLocal ? (pseudos[0] || 'Vous') : nomJoueur(i);
+      const estLocal = i === monIndex;
+      const label    = estLocal ? (pseudos[monIndex] || 'Vous') : nomJoueur(i);
 
       const pile = document.createElement('div');
       pile.className = 'pile' + (estLocal ? ' pile-locale' : '');
@@ -592,7 +565,7 @@
       } else {
         piles[joueurChoisi].querySelector('.pile-label')
           .insertAdjacentHTML('afterend', '<div class="badge-commence">Commence</div>');
-        const nom = joueurChoisi === 0 ? `${pseudos[0] || 'Vous'} ouvre` : `${nomJoueur(joueurChoisi)} ouvre`;
+        const nom = joueurChoisi === monIndex ? `${pseudos[monIndex] || 'Vous'} ouvre` : `${nomJoueur(joueurChoisi)} ouvre`;
         annonce.textContent = `${nom} la partie`;
       }
     }

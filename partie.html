@@ -482,6 +482,11 @@
 
         const socket = io();
 
+        // Mémoriser notre numéro de joueur dès la confirmation du serveur
+        socket.on('salle_rejointe', ({ numero }) => {
+          sessionStorage.setItem('barbu_mon_numero', numero - 1); // 0-indexé
+        });
+
         if (role === 'hote') {
           socket.emit('creer_partie', { code, joueurs, pseudo });
         } else {
@@ -509,6 +514,13 @@
           setTimeout(() => {
             window.location.href = `jeu.html?code=${c}&joueurs=${nb}`;
           }, 800);
+        });
+
+        // Réception de la main distribuée par le serveur
+        socket.on('votre_main', ({ main, retirees, parJoueur }) => {
+          sessionStorage.setItem('barbu_main',      JSON.stringify(main));
+          sessionStorage.setItem('barbu_retirees',  JSON.stringify(retirees));
+          sessionStorage.setItem('barbu_par_joueur', parJoueur);
         });
 
         socket.on('erreur_partie', ({ message }) => {
