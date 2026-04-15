@@ -379,6 +379,16 @@
         document.getElementById('erreur2').textContent = 'Veuillez choisir un nombre de joueurs.';
         return;
       }
+
+      // Sauvegarder la partie dans le stockage local
+      const parties = JSON.parse(localStorage.getItem('barbu_parties') || '{}');
+      parties[codePartie] = {
+        joueurs:   nbJoueurs,
+        createdAt: Date.now(),
+        status:    'waiting'
+      };
+      localStorage.setItem('barbu_parties', JSON.stringify(parties));
+
       window.location.href = `partie.html?code=${codePartie}&joueurs=${nbJoueurs}`;
     }
 

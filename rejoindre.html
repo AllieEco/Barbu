@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barbu — Rejoindre une partie</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background-color: #2d6a2d;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' mode='multiply'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E"),
+        repeating-linear-gradient(
+          0deg, transparent, transparent 2px,
+          rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 3px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 2px,
+          rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 3px
+        ),
+        radial-gradient(ellipse at center, #3a7d34 0%, #255225 60%, #1b3d1b 100%);
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%);
+    }
+
+    .carte {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      background: rgba(0,0,0,0.28);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      min-width: 360px;
+    }
+
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+      user-select: none;
+    }
+
+    .sous-titre {
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* Cases de saisie */
+    .cases {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .cases input {
+      width: 3rem;
+      height: 3.8rem;
+      text-align: center;
+      font-family: Georgia, serif;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: rgba(255,255,255,0.9);
+      background: rgba(0,0,0,0.35);
+      border: 2px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      outline: none;
+      caret-color: transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .cases input:focus {
+      border-color: rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.5);
+    }
+
+    .cases input.rempli {
+      border-color: rgba(180,255,180,0.55);
+    }
+
+    /* État erreur : cases en rouge */
+    .cases input.erreur-case {
+      border-color: rgba(255,100,100,0.7);
+      background: rgba(80,0,0,0.3);
+      animation: secousse 0.4s ease;
+    }
+
+    @keyframes secousse {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-5px); }
+      40%       { transform: translateX(5px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+
+    /* Message de retour (erreur ou succès) */
+    .feedback {
+      font-family: Georgia, serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      min-height: 1.2em;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+
+    .feedback.erreur  { color: rgba(255,110,110,0.9); }
+    .feedback.succes  { color: rgba(150,255,150,0.9); }
+
+    /* Info partie trouvée */
+    .info-partie {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 1.5rem;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(180,255,180,0.2);
+      border-radius: 8px;
+      width: 100%;
+    }
+
+    .info-partie.visible { display: flex; }
+
+    .info-label {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .info-valeur {
+      font-family: Georgia, serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.2em;
+      color: rgba(200,255,200,0.85);
+    }
+
+    /* Boutons */
+    .boutons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.8rem;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.25);
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .btn:hover {
+      background: rgba(0,0,0,0.45);
+      border-color: rgba(255,255,255,0.65);
+      transform: translateY(-2px);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn.primaire {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.6);
+    }
+
+    .btn.primaire:hover { background: rgba(255,255,255,0.22); }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .retour-lien {
+      font-family: Georgia, serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      text-decoration: none;
+      margin-top: -0.5rem;
+      transition: color 0.2s;
+    }
+
+    .retour-lien:hover { color: rgba(255,255,255,0.6); }
+  </style>
+</head>
+<body>
+  <div class="carte">
+    <h1>Barbu</h1>
+    <p class="sous-titre">Entrez le code de la partie<br>que vous souhaitez rejoindre</p>
+
+    <div class="cases" id="cases">
+      <input type="password" inputmode="numeric" maxlength="1" />
+      <input type="password" inputmode="numeric" maxlength="1" />
+      <input type="password" inputmode="numeric" maxlength="1" />
+      <input type="password" inputmode="numeric" maxlength="1" />
+      <input type="password" inputmode="numeric" maxlength="1" />
+      <input type="password" inputmode="numeric" maxlength="1" />
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <!-- Affiché uniquement si la partie est trouvée -->
+    <div class="info-partie" id="infoPartie">
+      <span class="info-label">Joueurs dans cette partie</span>
+      <span class="info-valeur" id="infoJoueurs">—</span>
+    </div>
+
+    <div class="boutons">
+      <button class="btn primaire" id="btnRejoindre" onclick="verifierCode()">Rejoindre</button>
+    </div>
+
+    <a class="retour-lien" href="tapis.html">← Retour</a>
+  </div>
+
+  <script>
+    const inputs   = Array.from(document.querySelectorAll('.cases input'));
+    const feedback = document.getElementById('feedback');
+    const infoPartie  = document.getElementById('infoPartie');
+    const infoJoueurs = document.getElementById('infoJoueurs');
+    const btnRejoindre = document.getElementById('btnRejoindre');
+
+    let partieEnCours = null; // stocke la partie trouvée avant confirmation
+
+    // ── Gestion des cases ────────────────────────────────────────────
+    inputs.forEach((input, i) => {
+      input.addEventListener('keydown', e => {
+        if (
+          !/^\d$/.test(e.key) &&
+          !['Backspace','Delete','Tab','ArrowLeft','ArrowRight'].includes(e.key)
+        ) { e.preventDefault(); return; }
+
+        if (e.key === 'Backspace') {
+          if (input.value === '' && i > 0) {
+            inputs[i - 1].value = '';
+            inputs[i - 1].classList.remove('rempli','erreur-case');
+            inputs[i - 1].focus();
+          } else {
+            input.value = '';
+            input.classList.remove('rempli','erreur-case');
+          }
+          e.preventDefault();
+          reinitialiserFeedback();
+        }
+
+        if (e.key === 'ArrowLeft'  && i > 0)              inputs[i - 1].focus();
+        if (e.key === 'ArrowRight' && i < inputs.length - 1) inputs[i + 1].focus();
+      });
+
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/\D/g,'').slice(-1);
+        input.classList.remove('erreur-case');
+        reinitialiserFeedback();
+
+        if (input.value !== '') {
+          input.classList.add('rempli');
+          if (i < inputs.length - 1) inputs[i + 1].focus();
+        } else {
+          input.classList.remove('rempli');
+        }
+      });
+
+      input.addEventListener('paste', e => {
+        e.preventDefault();
+        const chiffres = (e.clipboardData || window.clipboardData)
+          .getData('text').replace(/\D/g,'').slice(0, 6);
+        chiffres.split('').forEach((c, j) => {
+          if (inputs[j]) { inputs[j].value = c; inputs[j].classList.add('rempli'); }
+        });
+        inputs[Math.min(chiffres.length, inputs.length - 1)].focus();
+        reinitialiserFeedback();
+      });
+    });
+
+    inputs[0].focus();
+
+    function reinitialiserFeedback() {
+      feedback.textContent = '';
+      feedback.className = 'feedback';
+      infoPartie.classList.remove('visible');
+      partieEnCours = null;
+      btnRejoindre.textContent = 'Rejoindre';
+    }
+
+    // ── Vérification du code ─────────────────────────────────────────
+    function verifierCode() {
+      // Si la partie a déjà été trouvée, on confirme l'entrée
+      if (partieEnCours) {
+        confirmerEntree();
+        return;
+      }
+
+      const code = inputs.map(inp => inp.value).join('');
+
+      if (code.length < 6) {
+        afficherErreur('Veuillez saisir les 6 chiffres du code.');
+        inputs.find(inp => inp.value === '')?.focus();
+        return;
+      }
+
+      // Chercher dans le stockage local
+      const parties = JSON.parse(localStorage.getItem('barbu_parties') || '{}');
+      const partie  = parties[code];
+
+      if (!partie) {
+        // Partie introuvable
+        inputs.forEach(inp => inp.classList.add('erreur-case'));
+        afficherErreur('Aucune partie trouvée avec ce code.');
+        setTimeout(() => inputs.forEach(inp => inp.classList.remove('erreur-case')), 600);
+        return;
+      }
+
+      // Partie trouvée — afficher les infos et demander confirmation
+      partieEnCours = { code, ...partie };
+      const nb = partie.joueurs;
+      infoJoueurs.textContent = `${nb} joueur${nb > 1 ? 's' : ''}`;
+      infoPartie.classList.add('visible');
+      feedback.textContent = 'Partie trouvée !';
+      feedback.className = 'feedback succes';
+      btnRejoindre.textContent = 'Confirmer et rejoindre';
+    }
+
+    function confirmerEntree() {
+      const { code, joueurs } = partieEnCours;
+      // TODO : notifier le serveur qu'un joueur rejoint
+      window.location.href = `partie.html?code=${code}&joueurs=${joueurs}&role=joueur`;
+    }
+
+    // Valider avec Entrée
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') verifierCode();
+    });
+  </script>
+</body>
+</html>
