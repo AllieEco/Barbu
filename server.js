@@ -137,7 +137,10 @@ io.on('connection', socket => {
         joueurCourant: joueurCommence,
         pliActuel:     [],
         suitePli:      null,
-        scores:        new Array(p.joueurs).fill(0)  // plis remportés par joueur
+        scores:        new Array(p.joueurs).fill(0),
+        contrat:       1,   // 1 = plis (4 pts), 2 = cœurs (×6 pts), 3 = dames (×12 pts)
+        scoresC1:      null,
+        scoresC2:      null
       };
 
       setTimeout(() => {
@@ -159,7 +162,8 @@ io.on('connection', socket => {
     socket.emit('etat_jeu', {
       joueurCourant: jeu.joueurCourant,
       pliActuel:     jeu.pliActuel,
-      suitePli:      jeu.suitePli
+      suitePli:      jeu.suitePli,
+      contrat:       jeu.contrat
     });
   });
 
@@ -210,7 +214,7 @@ io.on('connection', socket => {
 
     if (pliComplet) {
       // Gagnant = carte la plus haute de la couleur demandée
-      let gagnant  = jeu.pliActuel[0].joueurIndex;
+      let gagnant   = jeu.pliActuel[0].joueurIndex;
       let meilleure = -1;
       for (const { joueurIndex: ji, carte: c } of jeu.pliActuel) {
         if (c.suit === jeu.suitePli && ORDRE_RANK[c.rank] > meilleure) {
@@ -219,17 +223,116 @@ io.on('connection', socket => {
         }
       }
 
-      jeu.scores[gagnant] += 4; // chaque pli vaut 4 points (première partie)
+      // ── Score selon le contrat ───────────────────────────────────────
+      let pointsPli = 0;
+      if (jeu.contrat === 1) {
+        pointsPli = 4;
+      } else if (jeu.contrat === 2) {
+        const nbCoeurs = jeu.pliActuel.filter(e => e.carte.suit === '♥').length;
+        pointsPli = nbCoeurs * 6;
+      } else {
+        // Contrat 3 : chaque dame vaut 12 points
+        const nbDames = jeu.pliActuel.filter(e => e.carte.rank === 'Q').length;
+        pointsPli = nbDames * 12;
+      }
+      jeu.scores[gagnant] += pointsPli;
+
+      const pliSave = [...jeu.pliActuel]; // copie pour le log
       jeu.pliActuel     = [];
       jeu.suitePli      = null;
       jeu.joueurCourant = gagnant;
-      console.log(`[Jeu] ${code} : pli → ${jeu.pseudos[gagnant]} (${jeu.scores[gagnant]} pli(s))`);
+      console.log(`[Jeu] ${code} C${jeu.contrat}: pli → ${jeu.pseudos[gagnant]} +${pointsPli} pts (total ${jeu.scores[gagnant]})`);
 
       setTimeout(() => {
-        io.to(code).emit('pli_termine', { gagnant, scores: jeu.scores });
+        io.to(code).emit('pli_termine', { gagnant, scores: jeu.scores, pointsPli });
+
         if (jeu.mains[0].length === 0) {
-          io.to(code).emit('partie_terminee', { scores: jeu.scores, pseudos: jeu.pseudos });
-          delete jeux[code];
+          // ── Fin du contrat ─────────────────────────────────────────────
+          if (jeu.contrat === 1) {
+            // Sauvegarder les scores du contrat 1 et annoncer la transition
+            jeu.scoresC1 = [...jeu.scores];
+            console.log(`[Jeu] ${code} : fin contrat 1 → transition vers contrat 2`);
+
+            setTimeout(() => {
+              io.to(code).emit('fin_contrat_1', { scores: jeu.scoresC1, pseudos: jeu.pseudos });
+
+              // Après 5 s d'affichage, relancer avec le contrat 2
+              setTimeout(() => {
+                const nbJ = jeu.socketIds.length;
+                const { mains: nouvellesMains, retirees: nouvRetirees, parJoueur: nouvParJoueur } = distribuerCartes(nbJ);
+                const joueurCommence = Math.floor(Math.random() * nbJ);
+
+                jeu.mains         = nouvellesMains;
+                jeu.contrat       = 2;
+                jeu.pliActuel     = [];
+                jeu.suitePli      = null;
+                jeu.joueurCourant = joueurCommence;
+
+                // Envoyer la nouvelle main à chaque joueur individuellement
+                jeu.socketIds.forEach((socketId, i) => {
+                  io.to(socketId).emit('votre_main_contrat2', {
+                    main: nouvellesMains[i],
+                    retirees: nouvRetirees,
+                    parJoueur: nouvParJoueur
+                  });
+                });
+
+                io.to(code).emit('debut_contrat_2', {
+                  joueurCommence,
+                  retirees: nouvRetirees,
+                  parJoueur: nouvParJoueur
+                });
+                console.log(`[Jeu] ${code} : contrat 2 lancé — commence : ${jeu.pseudos[joueurCommence]}`);
+              }, 5000);
+            }, 1500);
+
+          } else if (jeu.contrat === 2) {
+            // Transition vers le contrat 3
+            jeu.scoresC2 = [...jeu.scores];
+            console.log(`[Jeu] ${code} : fin contrat 2 → transition vers contrat 3`);
+
+            setTimeout(() => {
+              io.to(code).emit('fin_contrat_2', { scores: jeu.scoresC2, pseudos: jeu.pseudos });
+
+              setTimeout(() => {
+                const nbJ = jeu.socketIds.length;
+                const { mains: nouvellesMains, retirees: nouvRetirees, parJoueur: nouvParJoueur } = distribuerCartes(nbJ);
+                const joueurCommence = Math.floor(Math.random() * nbJ);
+
+                jeu.mains         = nouvellesMains;
+                jeu.contrat       = 3;
+                jeu.pliActuel     = [];
+                jeu.suitePli      = null;
+                jeu.joueurCourant = joueurCommence;
+
+                jeu.socketIds.forEach((socketId, i) => {
+                  io.to(socketId).emit('votre_main_contrat3', {
+                    main: nouvellesMains[i],
+                    retirees: nouvRetirees,
+                    parJoueur: nouvParJoueur
+                  });
+                });
+
+                io.to(code).emit('debut_contrat_3', {
+                  joueurCommence,
+                  retirees: nouvRetirees,
+                  parJoueur: nouvParJoueur
+                });
+                console.log(`[Jeu] ${code} : contrat 3 lancé — commence : ${jeu.pseudos[joueurCommence]}`);
+              }, 5000);
+            }, 1500);
+
+          } else {
+            // Fin complète de la partie (contrat 3 terminé)
+            console.log(`[Jeu] ${code} : partie terminée`);
+            io.to(code).emit('partie_terminee', {
+              scores:         jeu.scores,
+              scoresContrat1: jeu.scoresC1,
+              scoresContrat2: jeu.scoresC2,
+              pseudos:        jeu.pseudos
+            });
+            delete jeux[code];
+          }
         }
       }, 1500);
     }

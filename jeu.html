@@ -54,8 +54,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 860px;
-      height: 500px;
+      width: var(--tw, 860px);
+      height: var(--th, 500px);
       border-radius: 50%;
       background:
         radial-gradient(ellipse at 35% 30%, #d4a05a, transparent 60%),
@@ -73,8 +73,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 780px;
-      height: 420px;
+      width: var(--fw, 780px);
+      height: var(--fh, 420px);
       border-radius: 50%;
       background-color: #276327;
       background-image:
@@ -586,6 +586,107 @@
     }
 
     .suite-info.visible { opacity: 1; }
+
+    /* ── Overlay transition entre contrats ── */
+    .contrat-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    .contrat-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .contrat-titre-fin {
+      font-family: Georgia, serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .contrat-titre-nouveau {
+      font-family: Georgia, serif;
+      font-size: 2rem;
+      letter-spacing: 0.12em;
+      color: #cc1111;
+      text-shadow: 0 0 30px rgba(200,30,30,0.5);
+      animation: battement 1.4s ease-in-out infinite;
+    }
+
+    .contrat-titre-nouveau.dames {
+      color: #b044e0;
+      text-shadow: 0 0 30px rgba(160,40,200,0.5);
+    }
+
+    @keyframes battement {
+      0%, 100% { transform: scale(1);    }
+      50%       { transform: scale(1.06); }
+    }
+
+    .contrat-sous {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .contrat-scores {
+      display: flex;
+      gap: 1.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 600px;
+    }
+
+    .contrat-score-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .contrat-score-nom {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .contrat-score-val {
+      font-family: Georgia, serif;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #ffd044;
+      text-shadow: 0 0 12px rgba(255,208,68,0.4);
+    }
+
+    .contrat-score-val span {
+      font-size: 0.75rem;
+      color: rgba(255,208,68,0.5);
+    }
+
+    .contrat-compte {
+      font-family: Georgia, serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+    }
   </style>
 </head>
 <body>
@@ -593,7 +694,8 @@
     <div class="table-bois"></div>
     <div class="table-feutre">
       <div class="table-info">
-        <span class="table-titre">Barbu</span>
+        <img src="xefia.png" alt="Xefia"
+             style="width:calc(var(--fw, 780px) * 0.3);height:auto;opacity:0.3;user-select:none;pointer-events:none;filter:brightness(2);" />
         <span class="table-sous" id="tableSous"></span>
         <span class="table-annonce" id="tableAnnonce"></span>
       </div>
@@ -607,6 +709,15 @@
   <div class="suite-info" id="suiteInfo"></div>
   <div class="info-bar" id="infoBar"></div>
 
+  <!-- Overlay transition entre contrats -->
+  <div class="contrat-overlay" id="contratOverlay">
+    <div class="contrat-titre-fin" id="contratTitreFin"></div>
+    <div class="contrat-scores" id="contratScores"></div>
+    <div class="contrat-titre-nouveau" id="contratTitreNouveau"></div>
+    <div class="contrat-sous" id="contratSous"></div>
+    <div class="contrat-compte" id="contratCompte"></div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Overlay : main du joueur -->
@@ -619,6 +730,20 @@
   </div>
 
   <script>
+    // ── Responsive : facteur d'échelle calculé une fois au chargement ──
+    // La scène "pleine taille" fait 1180 × 860 px (table + espace pour les piles)
+    const _MAX_SW = 1180, _MAX_SH = 860;
+    const scale = Math.min(
+      (window.innerWidth  * 0.98) / _MAX_SW,
+      (window.innerHeight * 0.95) / _MAX_SH,
+      1
+    );
+    const _root = document.documentElement;
+    _root.style.setProperty('--tw', (860 * scale) + 'px');
+    _root.style.setProperty('--th', (500 * scale) + 'px');
+    _root.style.setProperty('--fw', (780 * scale) + 'px');
+    _root.style.setProperty('--fh', (420 * scale) + 'px');
+
     const params    = new URLSearchParams(window.location.search);
     const code      = params.get('code') || '??????';
     const nbJoueurs = parseInt(params.get('joueurs'), 10) || 4;
@@ -670,10 +795,10 @@
 
     // ── Positionnement des tas autour de la table ────────────────────
     const scene    = document.getElementById('scene');
-    const ORBIT_RX = 780 / 2 + 140;
-    const ORBIT_RY = 420 / 2 + 140;
-    const SCENE_W  = ORBIT_RX * 2 + 120;
-    const SCENE_H  = ORBIT_RY * 2 + 160;
+    const ORBIT_RX = (780 / 2 + 140) * scale;
+    const ORBIT_RY = (420 / 2 + 140) * scale;
+    const SCENE_W  = ORBIT_RX * 2 + 120 * scale;
+    const SCENE_H  = ORBIT_RY * 2 + 160 * scale;
     scene.style.width  = SCENE_W + 'px';
     scene.style.height = SCENE_H + 'px';
 
@@ -841,8 +966,8 @@
       const angle  = (2 * Math.PI * posVis / nbJoueurs) + Math.PI / 2;
 
       // Décalage depuis le centre de la scène (petite ellipse, les cartes restent sur la table)
-      const ox = 95 * Math.cos(angle);
-      const oy = 60 * Math.sin(angle);
+      const ox = 95 * scale * Math.cos(angle);
+      const oy = 60 * scale * Math.sin(angle);
 
       const el = document.createElement('div');
       el.className = 'carte-table ' + (carte.rouge ? 'rouge' : 'noir');
@@ -877,9 +1002,12 @@
     const socket = io();
     socket.emit('rejoindre_jeu', { code, monIndex });
 
-    socket.on('etat_jeu', ({ joueurCourant: jc, pliActuel, suitePli: sp }) => {
+    let contratActuel = 1; // mis à jour par etat_jeu et debut_contrat_2
+
+    socket.on('etat_jeu', ({ joueurCourant: jc, pliActuel, suitePli: sp, contrat: ct }) => {
       joueurCourant = jc;
       suitePli      = sp;
+      if (ct) contratActuel = ct;
       pliActuel.forEach(({ joueurIndex, carte }) => afficherCarteTable(joueurIndex, carte));
       reconstruireMain();
       mettreAJourTour();
@@ -916,17 +1044,157 @@
       }, 500);
     });
 
-    socket.on('partie_terminee', ({ scores, pseudos: ps }) => {
-      // Afficher le classement final
-      const classement = scores
-        .map((nb, i) => ({ nom: ps[i] || `Joueur ${i+1}`, nb }))
-        .sort((a, b) => b.nb - a.nb)
-        .map((j, rang) => `${rang + 1}. ${j.nom} — ${j.nb} pt${j.nb > 1 ? 's' : ''}`)
-        .join('\n');
+    // ── Fonction générique d'affichage de l'overlay de transition ────
+    function afficherTransition({ titreFin, titreNouveau, sousTitre, scores: sc, pseudos: ps, classeDames = false }) {
+      document.getElementById('contratTitreFin').textContent    = titreFin;
+      document.getElementById('contratSous').textContent        = sousTitre;
+      const titreEl = document.getElementById('contratTitreNouveau');
+      titreEl.textContent = titreNouveau;
+      titreEl.className   = 'contrat-titre-nouveau' + (classeDames ? ' dames' : '');
+
+      document.getElementById('contratScores').innerHTML = sc
+        .map((pts, i) => `
+          <div class="contrat-score-item">
+            <div class="contrat-score-nom">${ps[i] || `Joueur ${i+1}`}</div>
+            <div class="contrat-score-val">${pts}<span> pts</span></div>
+          </div>`)
+        .join('');
+
+      const compteEl = document.getElementById('contratCompte');
+      let reste = 5;
+      compteEl.textContent = `Reprise dans ${reste} s…`;
+      const iv = setInterval(() => {
+        reste--;
+        if (reste > 0) { compteEl.textContent = `Reprise dans ${reste} s…`; }
+        else { clearInterval(iv); compteEl.textContent = 'Redistribution en cours…'; }
+      }, 1000);
+
+      document.getElementById('contratOverlay').classList.add('visible');
+    }
+
+    // ── Transition vers le contrat 2 ─────────────────────────────────
+    socket.on('fin_contrat_1', ({ scores: sc, pseudos: ps }) => {
+      afficherTransition({
+        titreFin:    'Fin du Contrat 1 — Ne prenez pas de plis !',
+        titreNouveau:'♥ Contrat 2 · Ne prenez pas de cœurs ! ♥',
+        sousTitre:   'Chaque cœur remporté vaut 6 points',
+        scores: sc, pseudos: ps
+      });
+    });
+
+    // ── Fonction générique : réception d'une nouvelle main ───────────
+    function recevoirNouvelleMain({ main, retirees: ret, parJoueur: pj }) {
+      const nouvelle = [...main].sort((a, b) =>
+        ORDRE_SUIT[a.suit] !== ORDRE_SUIT[b.suit]
+          ? ORDRE_SUIT[a.suit] - ORDRE_SUIT[b.suit]
+          : ORDRE_RANK[a.rank] - ORDRE_RANK[b.rank]
+      );
+      maMainCourante.length = 0;
+      nouvelle.forEach(c => maMainCourante.push(c));
+
+      if (ret.length > 0) {
+        const html = ret.map(c =>
+          `<span class="${c.rouge ? 'rouge' : 'noir'}">${c.rank}${c.suit}</span>`
+        ).join(' &nbsp;·&nbsp; ');
+        infoBar.innerHTML = `Cartes retirées &nbsp;: &nbsp;${html}`;
+      } else {
+        infoBar.innerHTML = '';
+      }
+
+      piles.forEach(pile => {
+        const countEl = pile.querySelector('.pile-count');
+        if (countEl) countEl.textContent = `${pj} carte${pj > 1 ? 's' : ''}`;
+      });
+    }
+
+    // ── Fonction générique : démarrage d'un nouveau contrat ──────────
+    function demarrerContrat({ numContrat, joueurCommence, sousTitre, annonceTexte }) {
+      contratActuel = numContrat;
+      joueurCourant = joueurCommence;
+      suitePli      = null;
+      cartesTable   = [];
+
+      document.getElementById('pliZone').innerHTML = '';
+      annonce.textContent = '';
+      document.getElementById('tableSous').textContent = `Partie · ${code} — ${sousTitre}`;
+      document.querySelectorAll('.badge-commence').forEach(b => b.remove());
+      document.getElementById('contratOverlay').classList.remove('visible');
+
+      piles.forEach(p => p.classList.remove('actif', 'pile-active'));
+      let courantAnim = 0, toursAnim = 0;
+      const totalAnim = nbJoueurs * 3 + joueurCommence;
+      let delaiAnim = 80;
+
+      function flashContrat() {
+        piles[courantAnim % nbJoueurs].classList.remove('actif');
+        courantAnim++; toursAnim++;
+        piles[courantAnim % nbJoueurs].classList.add('actif');
+        delaiAnim = toursAnim < totalAnim - nbJoueurs ? 80 : 80 + (toursAnim - (totalAnim - nbJoueurs)) * 60;
+        if (toursAnim < totalAnim) {
+          setTimeout(flashContrat, delaiAnim);
+        } else {
+          piles.forEach(p => p.classList.remove('actif'));
+          const nom = joueurCommence === monIndex
+            ? `${pseudos[monIndex] || 'Vous'} ouvre`
+            : `${nomJoueur(joueurCommence)} ouvre`;
+          piles[joueurCommence].querySelector('.pile-label')
+            .insertAdjacentHTML('afterend', '<div class="badge-commence">Commence</div>');
+          annonce.textContent = `${nom} — ${annonceTexte}`;
+          setTimeout(() => { reconstruireMain(); mettreAJourTour(); }, 600);
+        }
+      }
+
+      setTimeout(() => { piles[0].classList.add('actif'); setTimeout(flashContrat, 300); }, 400);
+    }
+
+    socket.on('votre_main_contrat2', data => recevoirNouvelleMain(data));
+    socket.on('debut_contrat_2', ({ joueurCommence }) => {
+      demarrerContrat({
+        numContrat:    2,
+        joueurCommence,
+        sousTitre:     'Ne prenez pas de cœurs !',
+        annonceTexte:  'Ne prenez pas de cœurs !'
+      });
+    });
+
+    // ── Transition vers le contrat 3 ─────────────────────────────────
+    socket.on('fin_contrat_2', ({ scores: sc, pseudos: ps }) => {
+      afficherTransition({
+        titreFin:    'Fin du Contrat 2 — Ne prenez pas de cœurs !',
+        titreNouveau:'♛ Contrat 3 · Ne prenez pas de dames ! ♛',
+        sousTitre:   'Chaque dame remportée vaut 12 points',
+        scores: sc, pseudos: ps,
+        classeDames: true
+      });
+    });
+
+    socket.on('votre_main_contrat3', data => recevoirNouvelleMain(data));
+    socket.on('debut_contrat_3', ({ joueurCommence }) => {
+      demarrerContrat({
+        numContrat:    3,
+        joueurCommence,
+        sousTitre:     'Ne prenez pas de dames !',
+        annonceTexte:  'Ne prenez pas de dames !'
+      });
+    });
+
+    socket.on('partie_terminee', ({ scores, scoresContrat1, scoresContrat2, pseudos: ps }) => {
+      const lignes = scores
+        .map((total, i) => {
+          const c1  = scoresContrat1 ? scoresContrat1[i] : 0;
+          const c2  = scoresContrat2 ? scoresContrat2[i] - c1 : 0;
+          const c3  = scoresContrat2 ? total - scoresContrat2[i] : total;
+          return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3 };
+        })
+        .sort((a, b) => b.total - a.total)
+        .map((j, rang) =>
+          `${rang + 1}. ${j.nom} — ${j.total} pts\n   Plis: ${j.c1} · Cœurs: ${j.c2} · Dames: ${j.c3}`
+        )
+        .join('\n\n');
 
       indicateur.textContent = 'Partie terminée !';
       indicateur.className   = 'tour-indicateur attente';
-      setTimeout(() => alert(`Fin de partie !\n\n${classement}`), 600);
+      setTimeout(() => alert(`Fin de partie !\n\n${lignes}`), 600);
     });
 
     socket.on('carte_refusee', ({ message }) => {
