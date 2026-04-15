@@ -184,6 +184,22 @@
       white-space: nowrap;
     }
 
+    .pile-score {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,220,100,0.75);
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      white-space: nowrap;
+      min-height: 1em;
+      transition: color 0.3s;
+    }
+
+    .pile-score.actif {
+      color: #ffd044;
+      text-shadow: 0 0 8px rgba(255,208,68,0.6), 0 1px 4px rgba(0,0,0,0.8);
+    }
+
     /* ── Joueur actif (celui qui commence) ── */
     @keyframes halo-pulse {
       0%, 100% { box-shadow: 0 0 18px 6px rgba(255, 210, 80, 0.5),  0 10px 18px rgba(0,0,0,0.7); }
@@ -411,6 +427,165 @@
     }
 
     .main-fermer:hover { color: rgba(255,255,255,0.65); }
+
+    /* ── Indicateur de tour ── */
+    .tour-indicateur {
+      position: fixed;
+      top: 1.2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      font-family: Georgia, serif;
+      font-size: 0.78rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.45rem 1.4rem;
+      border-radius: 30px;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: all 0.4s;
+    }
+
+    .tour-indicateur.mon-tour {
+      background: rgba(255, 208, 68, 0.15);
+      border: 1px solid rgba(255, 208, 68, 0.5);
+      color: #ffd044;
+      animation: pulse-tour 1.6s ease-in-out infinite;
+    }
+
+    .tour-indicateur.attente {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.35);
+    }
+
+    @keyframes pulse-tour {
+      0%, 100% { box-shadow: 0 0 12px rgba(255,208,68,0.15); }
+      50%       { box-shadow: 0 0 28px rgba(255,208,68,0.45); }
+    }
+
+    /* Pile mise en avant (joueur courant) — adversaires */
+    @keyframes pile-scintille {
+      0%, 100% { box-shadow: 0 0 10px 3px rgba(255,255,255,0.2),
+                             inset 0 0 0 4px #1c3b82,
+                             inset 0 0 0 6px rgba(255,255,255,0.25); }
+      50%       { box-shadow: 0 0 28px 10px rgba(255,255,255,0.55),
+                             inset 0 0 0 4px #1c3b82,
+                             inset 0 0 0 6px rgba(255,255,255,0.25); }
+    }
+
+    @keyframes pile-scintille-rouge {
+      0%, 100% { box-shadow: 0 0 10px 3px rgba(255,100,100,0.3),
+                             inset 0 0 0 4px #8b1a1a,
+                             inset 0 0 0 6px rgba(255,255,255,0.25); }
+      50%       { box-shadow: 0 0 28px 10px rgba(255,100,100,0.7),
+                             inset 0 0 0 4px #8b1a1a,
+                             inset 0 0 0 6px rgba(255,255,255,0.25); }
+    }
+
+    .pile.pile-active:not(.pile-locale) .carte-dos:nth-child(3) {
+      animation: pile-scintille 1.1s ease-in-out infinite;
+    }
+
+    /* Pile locale active (la mienne) */
+    .pile.pile-active.pile-locale .carte-dos:nth-child(3) {
+      animation: pile-scintille-rouge 1.1s ease-in-out infinite;
+    }
+
+    /* ── Cartes jouables / non-jouables dans la main ── */
+    .carte-face.non-jouable {
+      opacity: 0.35;
+      cursor: not-allowed;
+      filter: grayscale(55%);
+    }
+
+    .carte-face.non-jouable:hover {
+      transform: none !important;
+      z-index: 1 !important;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+
+    .carte-face.jouable { cursor: pointer; }
+
+    /* ── Cartes jouées sur la table ── */
+    .pli-zone {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .carte-table {
+      position: absolute;
+      width: 60px;
+      height: 85px;
+      border-radius: 5px;
+      background: #fdfdf8;
+      border: 2px solid rgba(0,0,0,0.1);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.65);
+      animation: carte-tombe 0.22s ease;
+      overflow: hidden;
+    }
+
+    @keyframes carte-tombe {
+      from { transform: scale(0.5) translateY(-15px); opacity: 0; }
+      to   { transform: scale(1)   translateY(0);     opacity: 1; }
+    }
+
+    .carte-table.sortie {
+      animation: carte-sortie 0.35s ease forwards;
+    }
+
+    @keyframes carte-sortie {
+      to { transform: scale(0.2); opacity: 0; }
+    }
+
+    .carte-table .carte-coin {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+      font-family: Georgia, serif;
+    }
+
+    .carte-table .carte-coin.tl { top: 3px; left: 4px; }
+    .carte-table .carte-coin.br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+    .carte-table .coin-rang { font-size: 0.78rem; font-weight: bold; }
+    .carte-table .coin-suit { font-size: 0.58rem; }
+
+    .carte-table .carte-centre {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.7rem;
+      line-height: 1;
+    }
+
+    .carte-table.rouge { color: #cc1111; }
+    .carte-table.noir  { color: #111111; }
+
+    /* Message suite obligatoire */
+    .suite-info {
+      position: fixed;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 300;
+      font-family: Georgia, serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,200,80,0.9);
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,200,80,0.3);
+      border-radius: 20px;
+      padding: 0.35rem 1rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .suite-info.visible { opacity: 1; }
   </style>
 </head>
 <body>
@@ -423,10 +598,16 @@
         <span class="table-annonce" id="tableAnnonce"></span>
       </div>
     </div>
+    <!-- Cartes jouées sur la table -->
+    <div id="pliZone" style="position:absolute;inset:0;z-index:20;pointer-events:none;"></div>
     <!-- Tas injectés par JS -->
   </div>
 
+  <div class="tour-indicateur attente" id="tourIndicateur"></div>
+  <div class="suite-info" id="suiteInfo"></div>
   <div class="info-bar" id="infoBar"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
 
   <!-- Overlay : main du joueur -->
   <div class="main-overlay" id="mainOverlay">
@@ -474,21 +655,7 @@
     const overlay      = document.getElementById('mainOverlay');
     const mainCartesEl = document.getElementById('mainCartes');
 
-    maMain.forEach(carte => {
-      const div = document.createElement('div');
-      div.className = 'carte-face ' + (carte.rouge ? 'rouge' : 'noir');
-      div.innerHTML = `
-        <div class="carte-coin tl">
-          <div class="coin-rang">${carte.rank}</div>
-          <div class="coin-suit">${carte.suit}</div>
-        </div>
-        <div class="carte-centre">${carte.suit}</div>
-        <div class="carte-coin br">
-          <div class="coin-rang">${carte.rank}</div>
-          <div class="coin-suit">${carte.suit}</div>
-        </div>`;
-      mainCartesEl.appendChild(div);
-    });
+    // Les cartes de la main sont construites dynamiquement par reconstruireMain()
 
     function ouvrirMain() { overlay.classList.add('visible'); }
     function fermerMain()  { overlay.classList.remove('visible'); }
@@ -538,7 +705,8 @@
           <div class="carte-dos"></div>
         </div>
         <div class="pile-label">${label}</div>
-        <div class="pile-count">${parJoueur} carte${parJoueur > 1 ? 's' : ''}</div>`;
+        <div class="pile-count">${parJoueur} carte${parJoueur > 1 ? 's' : ''}</div>
+        <div class="pile-score" id="score-${i}">0 pt</div>`;
 
       if (estLocal) pile.addEventListener('click', ouvrirMain);
 
@@ -546,8 +714,12 @@
       piles.push(pile);
     }
 
-    // ── Joueur qui commence (décidé par le serveur, identique pour tous) ──
+    // ── État du jeu ──────────────────────────────────────────────────
     const joueurChoisi = parseInt(sessionStorage.getItem('barbu_joueur_commence') ?? Math.floor(Math.random() * nbJoueurs), 10);
+    let maMainCourante = [...maMain]; // mutable : les cartes disparaissent au fil du jeu
+    let joueurCourant  = joueurChoisi;
+    let suitePli       = null;        // couleur obligatoire du pli en cours
+    let cartesTable    = [];          // éléments DOM des cartes posées
     const annonce = document.getElementById('tableAnnonce');
     let tours = 0;
     const totalTours = nbJoueurs * 3 + joueurChoisi;
@@ -563,6 +735,9 @@
       if (tours < totalTours) {
         setTimeout(flashSuivant, delai);
       } else {
+        // Fin du tirage — retirer le style "actif" (tirage) de tous les tas
+        piles.forEach(p => p.classList.remove('actif'));
+
         piles[joueurChoisi].querySelector('.pile-label')
           .insertAdjacentHTML('afterend', '<div class="badge-commence">Commence</div>');
         const nom = joueurChoisi === monIndex ? `${pseudos[monIndex] || 'Vous'} ouvre` : `${nomJoueur(joueurChoisi)} ouvre`;
@@ -574,6 +749,197 @@
       piles[0].classList.add('actif');
       setTimeout(flashSuivant, 300);
     }, 400);
+
+    // ── Fonctions de gameplay ─────────────────────────────────────────
+
+    const indicateur = document.getElementById('tourIndicateur');
+    const suiteInfo  = document.getElementById('suiteInfo');
+    const pliZone    = document.getElementById('pliZone');
+
+    // Construire / reconstruire les cartes de la main avec interactivité
+    function reconstruireMain() {
+      mainCartesEl.innerHTML = '';
+      maMainCourante.forEach(carte => {
+        const div = document.createElement('div');
+        div.className = 'carte-face ' + (carte.rouge ? 'rouge' : 'noir');
+        div.innerHTML = `
+          <div class="carte-coin tl">
+            <div class="coin-rang">${carte.rank}</div>
+            <div class="coin-suit">${carte.suit}</div>
+          </div>
+          <div class="carte-centre">${carte.suit}</div>
+          <div class="carte-coin br">
+            <div class="coin-rang">${carte.rank}</div>
+            <div class="coin-suit">${carte.suit}</div>
+          </div>`;
+        div.addEventListener('click', () => {
+          if (joueurCourant !== monIndex) return;
+          if (div.classList.contains('non-jouable')) {
+            // Rappel de la règle
+            suiteInfo.textContent = `Vous devez jouer ${suitePli}`;
+            suiteInfo.classList.add('visible');
+            setTimeout(() => suiteInfo.classList.remove('visible'), 2000);
+            return;
+          }
+          jouerCarte(carte);
+        });
+        mainCartesEl.appendChild(div);
+      });
+      mettreAJourInteractivite();
+    }
+
+    // Marquer les cartes jouables / non-jouables
+    function mettreAJourInteractivite() {
+      mainCartesEl.querySelectorAll('.carte-face').forEach((el, i) => {
+        const carte   = maMainCourante[i];
+        const jouable = estJouable(carte);
+        el.classList.toggle('jouable',     jouable);
+        el.classList.toggle('non-jouable', !jouable);
+      });
+    }
+
+    // Règle de suivi de couleur
+    function estJouable(carte) {
+      if (joueurCourant !== monIndex) return false; // pas mon tour
+      if (!suitePli) return true;                   // premier à jouer : libre
+      if (carte.suit === suitePli) return true;     // suit la couleur
+      const aLaCouleur = maMainCourante.some(c => c.suit === suitePli);
+      return !aLaCouleur;                           // coupe si pas la couleur
+    }
+
+    // Jouer une carte
+    function jouerCarte(carte) {
+      socket.emit('jouer_carte', { code, carte });
+      // Retrait optimiste de la carte
+      const idx = maMainCourante.findIndex(c => c.rank === carte.rank && c.suit === carte.suit);
+      if (idx !== -1) maMainCourante.splice(idx, 1);
+      reconstruireMain();
+      fermerMain();
+    }
+
+    // Mettre à jour l'indicateur de tour et la pile active
+    function mettreAJourTour() {
+      const monTour = joueurCourant === monIndex;
+      const nomJC   = pseudos[joueurCourant] || `Joueur ${joueurCourant + 1}`;
+
+      indicateur.textContent = monTour ? 'Votre tour — jouez une carte' : `Tour de ${nomJC}`;
+      indicateur.className   = 'tour-indicateur ' + (monTour ? 'mon-tour' : 'attente');
+
+      // Retirer pile-active de tous les tas, puis l'ajouter uniquement au joueur courant
+      piles.forEach((p, i) => {
+        p.classList.remove('pile-active');
+        if (i === joueurCourant) p.classList.add('pile-active');
+      });
+
+      mettreAJourInteractivite();
+      if (monTour) setTimeout(ouvrirMain, 400);
+    }
+
+    // Afficher une carte jouée — positionnée dans la scène, autour du centre de la table
+    function afficherCarteTable(joueurIndex, carte) {
+      const posVis = (joueurIndex - monIndex + nbJoueurs) % nbJoueurs;
+      const angle  = (2 * Math.PI * posVis / nbJoueurs) + Math.PI / 2;
+
+      // Décalage depuis le centre de la scène (petite ellipse, les cartes restent sur la table)
+      const ox = 95 * Math.cos(angle);
+      const oy = 60 * Math.sin(angle);
+
+      const el = document.createElement('div');
+      el.className = 'carte-table ' + (carte.rouge ? 'rouge' : 'noir');
+      // Centré dans la scène + décalage directionnel
+      el.style.left = (SCENE_W / 2 + ox - 30) + 'px';
+      el.style.top  = (SCENE_H / 2 + oy - 42) + 'px';
+      el.innerHTML  = `
+        <div class="carte-coin tl">
+          <div class="coin-rang">${carte.rank}</div>
+          <div class="coin-suit">${carte.suit}</div>
+        </div>
+        <div class="carte-centre">${carte.suit}</div>
+        <div class="carte-coin br">
+          <div class="coin-rang">${carte.rank}</div>
+          <div class="coin-suit">${carte.suit}</div>
+        </div>`;
+
+      pliZone.appendChild(el);
+      cartesTable.push(el);
+    }
+
+    // Vider la table après un pli (animation de sortie)
+    function viderTable() {
+      cartesTable.forEach(el => {
+        el.classList.add('sortie');
+        setTimeout(() => el.remove(), 380);
+      });
+      cartesTable = [];
+    }
+
+    // ── Socket.io pour le gameplay ────────────────────────────────────
+    const socket = io();
+    socket.emit('rejoindre_jeu', { code, monIndex });
+
+    socket.on('etat_jeu', ({ joueurCourant: jc, pliActuel, suitePli: sp }) => {
+      joueurCourant = jc;
+      suitePli      = sp;
+      pliActuel.forEach(({ joueurIndex, carte }) => afficherCarteTable(joueurIndex, carte));
+      reconstruireMain();
+      mettreAJourTour();
+    });
+
+    socket.on('carte_jouee', ({ joueurIndex, carte, joueurSuivant }) => {
+      if (suitePli === null) suitePli = carte.suit;
+      afficherCarteTable(joueurIndex, carte);
+      if (joueurSuivant !== null) {
+        joueurCourant = joueurSuivant;
+        mettreAJourTour();
+      }
+    });
+
+    socket.on('pli_termine', ({ gagnant, scores }) => {
+      joueurCourant = gagnant;
+      suitePli      = null;
+
+      // Mettre à jour les compteurs de plis
+      scores.forEach((nb, i) => {
+        const el = document.getElementById(`score-${i}`);
+        if (!el) return;
+        el.textContent = `${nb} pt${nb > 1 ? 's' : ''}`;
+        // Brève mise en avant du gagnant du pli
+        if (i === gagnant) {
+          el.classList.add('actif');
+          setTimeout(() => el.classList.remove('actif'), 1800);
+        }
+      });
+
+      setTimeout(() => {
+        viderTable();
+        mettreAJourTour();
+      }, 500);
+    });
+
+    socket.on('partie_terminee', ({ scores, pseudos: ps }) => {
+      // Afficher le classement final
+      const classement = scores
+        .map((nb, i) => ({ nom: ps[i] || `Joueur ${i+1}`, nb }))
+        .sort((a, b) => b.nb - a.nb)
+        .map((j, rang) => `${rang + 1}. ${j.nom} — ${j.nb} pt${j.nb > 1 ? 's' : ''}`)
+        .join('\n');
+
+      indicateur.textContent = 'Partie terminée !';
+      indicateur.className   = 'tour-indicateur attente';
+      setTimeout(() => alert(`Fin de partie !\n\n${classement}`), 600);
+    });
+
+    socket.on('carte_refusee', ({ message }) => {
+      suiteInfo.textContent = message;
+      suiteInfo.classList.add('visible');
+      setTimeout(() => suiteInfo.classList.remove('visible'), 2000);
+      // Remettre la carte en main si on l'avait retirée
+      reconstruireMain();
+    });
+
+
+    // Construction initiale de la main
+    reconstruireMain();
   </script>
 </body>
 </html>
