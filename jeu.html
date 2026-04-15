@@ -750,6 +750,126 @@
       text-transform: uppercase;
       color: rgba(255,255,255,0.2);
     }
+
+    /* ── Overlay fin de partie ── */
+    .fin-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.6rem;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s;
+    }
+    .fin-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .fin-titre {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .fin-classement {
+      display: flex;
+      flex-direction: column-reverse; /* perdant (index 0) affiché en bas */
+      gap: 0.7rem;
+      width: min(520px, 90vw);
+    }
+
+    .fin-ligne {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      opacity: 0;
+      animation: fin-apparition 0.45s ease forwards;
+    }
+
+    @keyframes fin-apparition {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fin-ligne.perdant  { background: rgba(200,30,30,0.12); border-color: rgba(200,30,30,0.25); }
+    .fin-ligne.gagnant  { background: rgba(255,208,68,0.1);  border-color: rgba(255,208,68,0.35); }
+
+    .fin-rang {
+      font-family: Georgia, serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      min-width: 64px;
+      text-align: center;
+      padding: 0.2rem 0.5rem;
+      border-radius: 20px;
+    }
+
+    .fin-ligne.perdant .fin-rang  { color: #ff6666; background: rgba(200,30,30,0.2); }
+    .fin-ligne.gagnant .fin-rang  { color: #ffd044; background: rgba(255,208,68,0.15); }
+    .fin-ligne:not(.perdant):not(.gagnant) .fin-rang { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+
+    .fin-nom {
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      color: rgba(255,255,255,0.85);
+      flex: 1;
+    }
+
+    .fin-ligne.gagnant .fin-nom { color: #ffd044; }
+    .fin-ligne.perdant .fin-nom { color: #ff9999; }
+
+    .fin-total {
+      font-family: Georgia, serif;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: rgba(255,255,255,0.7);
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .fin-ligne.gagnant .fin-total { color: #ffd044; }
+    .fin-ligne.perdant .fin-total { color: #ff6666; }
+
+    .fin-detail {
+      font-family: Georgia, serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.2);
+      width: 100%;
+      padding-top: 0.15rem;
+      padding-left: calc(64px + 1rem);
+    }
+
+    .fin-rejouer {
+      font-family: Georgia, serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      background: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 30px;
+      padding: 0.55rem 2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+    }
+    .fin-rejouer:hover {
+      color: rgba(255,255,255,0.7);
+      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+    }
   </style>
 </head>
 <body>
@@ -771,6 +891,13 @@
   <div class="tour-indicateur attente" id="tourIndicateur"></div>
   <div class="suite-info" id="suiteInfo"></div>
   <div class="info-bar" id="infoBar"></div>
+
+  <!-- Overlay fin de partie -->
+  <div class="fin-overlay" id="finOverlay">
+    <div class="fin-titre">Fin de partie</div>
+    <div class="fin-classement" id="finClassement"></div>
+    <button class="fin-rejouer" onclick="window.location.href='/tapis.html'">Rejouer</button>
+  </div>
 
   <!-- Overlay "Roi de Cœur capturé" -->
   <div class="roi-overlay" id="roiOverlay">
@@ -1316,7 +1443,11 @@
       document.getElementById('roiOverlay').classList.remove('visible');
       document.getElementById('contratOverlay').classList.remove('visible');
 
-      const lignes = scores
+      indicateur.textContent = 'Partie terminée !';
+      indicateur.className   = 'tour-indicateur attente';
+
+      // Construire le classement : perdant (le + de points) en premier
+      const joueurs = scores
         .map((total, i) => {
           const c1 = scoresContrat1 ? scoresContrat1[i] : 0;
           const c2 = scoresContrat2 ? scoresContrat2[i] - c1 : 0;
@@ -1325,22 +1456,38 @@
           const c5 = total - (scoresContrat4 ? scoresContrat4[i] : scoresContrat3 ? scoresContrat3[i] : 0);
           return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3, c4, c5 };
         })
-        .sort((a, b) => b.total - a.total)
-        .map((j, rang) => {
-          const detail = [
-            scoresContrat1 ? `Plis: ${j.c1}` : null,
-            scoresContrat2 ? `Cœurs: ${j.c2}` : null,
-            scoresContrat3 ? `Dames: ${j.c3}` : null,
-            scoresContrat4 ? `Roi: ${j.c4}` : null,
-            `Chaos: ${j.c5}`
-          ].filter(Boolean).join(' · ');
-          return `${rang + 1}. ${j.nom} — ${j.total} pts\n   ${detail}`;
-        })
-        .join('\n\n');
+        .sort((a, b) => b.total - a.total); // décroissant : perdant d'abord
 
-      indicateur.textContent = 'Partie terminée !';
-      indicateur.className   = 'tour-indicateur attente';
-      setTimeout(() => alert(`Fin de partie !\n\n${lignes}`), 600);
+      const n = joueurs.length;
+      const clasEl = document.getElementById('finClassement');
+      clasEl.innerHTML = joueurs.map((j, rang) => {
+        const estPerdant = rang === 0;
+        const estGagnant = rang === n - 1;
+        const labelRang  = estPerdant ? 'Perdant' : estGagnant ? 'Gagnant !' : `${rang + 1}e`;
+        const classeRang = estPerdant ? 'perdant' : estGagnant ? 'gagnant' : '';
+
+        const detail = [
+          scoresContrat1 ? `Plis&nbsp;${j.c1}` : null,
+          scoresContrat2 ? `Cœurs&nbsp;${j.c2}` : null,
+          scoresContrat3 ? `Dames&nbsp;${j.c3}` : null,
+          scoresContrat4 ? `Roi&nbsp;${j.c4}` : null,
+          `Chaos&nbsp;${j.c5}`
+        ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+        // délai échelonné : perdant (rang=0) apparaît en premier, gagnant en dernier
+        const delai = rang * 0.5;
+        return `
+          <div class="fin-ligne ${classeRang}" style="animation-delay:${delai}s">
+            <div class="fin-rang">${labelRang}</div>
+            <div style="flex:1">
+              <div class="fin-nom">${j.nom}</div>
+              <div class="fin-detail">${detail}</div>
+            </div>
+            <div class="fin-total">${j.total} pts</div>
+          </div>`;
+      }).join('');
+
+      setTimeout(() => document.getElementById('finOverlay').classList.add('visible'), 600);
     });
 
     socket.on('carte_refusee', ({ message }) => {
