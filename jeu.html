@@ -631,6 +631,55 @@
       text-shadow: 0 0 30px rgba(160,40,200,0.5);
     }
 
+    /* ── Overlay "Roi de Cœur capturé" ── */
+    .roi-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      background: radial-gradient(ellipse at center, rgba(100,0,0,0.95) 0%, rgba(0,0,0,0.97) 100%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s;
+    }
+    .roi-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .roi-symbole {
+      font-size: 6rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 40px rgba(255,50,50,0.9));
+      animation: battement 0.9s ease-in-out infinite;
+    }
+
+    .roi-titre {
+      font-family: Georgia, serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.15em;
+      color: #ff4444;
+      text-shadow: 0 0 30px rgba(255,60,60,0.7);
+      text-align: center;
+    }
+
+    .roi-joueur {
+      font-family: Georgia, serif;
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      color: #ffd044;
+      text-shadow: 0 0 20px rgba(255,208,68,0.6);
+    }
+
+    .roi-points {
+      font-family: Georgia, serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,180,180,0.5);
+    }
+
     @keyframes battement {
       0%, 100% { transform: scale(1);    }
       50%       { transform: scale(1.06); }
@@ -708,6 +757,14 @@
   <div class="tour-indicateur attente" id="tourIndicateur"></div>
   <div class="suite-info" id="suiteInfo"></div>
   <div class="info-bar" id="infoBar"></div>
+
+  <!-- Overlay "Roi de Cœur capturé" -->
+  <div class="roi-overlay" id="roiOverlay">
+    <div class="roi-symbole">♥</div>
+    <div class="roi-titre">Le Roi de Cœur a été capturé !</div>
+    <div class="roi-joueur" id="roiJoueur"></div>
+    <div class="roi-points" id="roiPoints"></div>
+  </div>
 
   <!-- Overlay transition entre contrats -->
   <div class="contrat-overlay" id="contratOverlay">
@@ -1178,17 +1235,54 @@
       });
     });
 
-    socket.on('partie_terminee', ({ scores, scoresContrat1, scoresContrat2, pseudos: ps }) => {
+    // ── Transition vers le contrat 4 ─────────────────────────────────
+    socket.on('fin_contrat_3', ({ scores: sc, pseudos: ps }) => {
+      afficherTransition({
+        titreFin:    'Fin du Contrat 3 — Ne prenez pas de dames !',
+        titreNouveau:'♥ Contrat 4 · Ne prenez pas le Roi de Cœur ! ♥',
+        sousTitre:   'Le Roi de Cœur vaut 52 points — le contrat se ferme dès qu\'il est pris',
+        scores: sc, pseudos: ps
+      });
+    });
+
+    socket.on('votre_main_contrat4', data => recevoirNouvelleMain(data));
+    socket.on('debut_contrat_4', ({ joueurCommence }) => {
+      demarrerContrat({
+        numContrat:    4,
+        joueurCommence,
+        sousTitre:     'Ne prenez pas le Roi de Cœur !',
+        annonceTexte:  'Ne prenez pas le Roi de Cœur !'
+      });
+    });
+
+    // ── Capture spectaculaire du Roi de Cœur ─────────────────────────
+    socket.on('roi_coeur_pris', ({ nom, points }) => {
+      // Bloquer les interactions
+      piles.forEach(p => p.classList.remove('pile-active'));
+      indicateur.textContent = 'Contrat fermé !';
+      indicateur.className   = 'tour-indicateur attente';
+      fermerMain();
+
+      document.getElementById('roiJoueur').textContent = nom;
+      document.getElementById('roiPoints').textContent = `hérite de ${points} points`;
+      document.getElementById('roiOverlay').classList.add('visible');
+    });
+
+    socket.on('partie_terminee', ({ scores, scoresContrat1, scoresContrat2, scoresContrat3, pseudos: ps }) => {
+      // Masquer l'overlay roi si visible
+      document.getElementById('roiOverlay').classList.remove('visible');
+
       const lignes = scores
         .map((total, i) => {
-          const c1  = scoresContrat1 ? scoresContrat1[i] : 0;
-          const c2  = scoresContrat2 ? scoresContrat2[i] - c1 : 0;
-          const c3  = scoresContrat2 ? total - scoresContrat2[i] : total;
-          return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3 };
+          const c1 = scoresContrat1 ? scoresContrat1[i] : 0;
+          const c2 = scoresContrat2 ? scoresContrat2[i] - c1 : 0;
+          const c3 = scoresContrat3 ? scoresContrat3[i] - (scoresContrat2 ? scoresContrat2[i] : 0) : 0;
+          const c4 = total - (scoresContrat3 ? scoresContrat3[i] : 0);
+          return { nom: ps[i] || `Joueur ${i+1}`, total, c1, c2, c3, c4 };
         })
         .sort((a, b) => b.total - a.total)
         .map((j, rang) =>
-          `${rang + 1}. ${j.nom} — ${j.total} pts\n   Plis: ${j.c1} · Cœurs: ${j.c2} · Dames: ${j.c3}`
+          `${rang + 1}. ${j.nom} — ${j.total} pts\n   Plis: ${j.c1} · Cœurs: ${j.c2} · Dames: ${j.c3} · Roi: ${j.c4}`
         )
         .join('\n\n');
 
