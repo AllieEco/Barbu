@@ -21,8 +21,13 @@ Cette implémentation supporte de **3 à 8 joueurs** connectés en réseau local
 | 2 | **Ne prenez pas de cœurs !** | Chaque cœur dans un pli remporté coûte des points | 6 pts / cœur |
 | 3 | **Ne prenez pas de dames !** | Chaque dame dans un pli remporté coûte des points — le contrat se ferme dès que les 4 dames sont sorties | 12 pts / dame |
 | 4 | **Ne prenez pas le Roi de Cœur !** | Prendre le K♥ coûte 52 points — le contrat se ferme dès que le Roi est pris | 52 pts |
+| 5 | **Chaos !** | Toutes les règles s'appliquent simultanément et de façon cumulative — tous les plis sont joués jusqu'au bout | 4 (pli) + 6/cœur + 12/dame + 52 (K♥) |
 
-Les contrats sont joués dans l'ordre. Les cartes sont redistribuées à chaque nouveau contrat.
+### Exemple Chaos
+Un joueur remporte un pli contenant 3 cœurs dont la Dame de Cœur :
+> 4 (pli) + 3×6 (cœurs) + 1×12 (dame) = **34 pts**
+
+Les scores sont **cumulatifs** sur les 5 contrats. Les cartes sont redistribuées à chaque nouveau contrat.
 
 ---
 
@@ -78,11 +83,12 @@ Le serveur démarre sur **http://localhost:3000**.
 
 ### 3. Déroulement
 - La partie commence dès que tous les joueurs sont connectés.
-- Un tirage au sort désigne le joueur qui ouvre le premier contrat.
+- Un tirage au sort désigne le joueur qui ouvre chaque contrat.
 - **Cliquez sur votre tas de cartes** (en bas, dos rouge) pour voir votre main.
 - Cliquez sur une carte pour la jouer — les cartes grisées ne sont pas jouables (règle de suivi de couleur).
 - Le gagnant du pli rejoue en premier.
 - À la fin de chaque contrat, les scores sont affichés et les cartes redistribuées automatiquement.
+- À la fin des 5 contrats, le classement final s'affiche du perdant (le plus de points) au gagnant (le moins de points).
 
 ---
 
@@ -108,7 +114,8 @@ Barbu/
 - Le jeu utilise un **jeu de 52 cartes**. Si le nombre de joueurs ne divise pas 52 exactement, les cartes les plus basses sont retirées (2♥ et 2♦ en priorité).
 - Le **suivi de couleur** est obligatoire : si vous avez la couleur demandée, vous devez la jouer.
 - Le gagnant d'un pli est le joueur ayant joué la carte la plus haute **de la couleur d'ouverture** — une coupe ne prend pas.
-- Les scores sont **cumulatifs** sur les 4 contrats.
+- Les scores sont **cumulatifs** sur les 5 contrats.
+- **Fermetures anticipées** : le contrat 3 se ferme dès que les 4 dames sont prises ; le contrat 4 se ferme dès que le Roi de Cœur est pris. Le contrat 5 (Chaos) se joue toujours jusqu'au bout.
 
 ---
 
