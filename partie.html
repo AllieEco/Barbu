@@ -4,11 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barbu — Partie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #d4a843;
+      --gold-glow:  rgba(212,168,67,0.25);
+      --gold-dim:   rgba(212,168,67,0.5);
+      --bg:         #070c08;
+      --card-bg:    rgba(255,255,255,0.04);
+      --card-border:rgba(255,255,255,0.08);
+      --text:       rgba(255,255,255,0.88);
+      --text-dim:   rgba(255,255,255,0.38);
+      --error:      rgba(240,100,100,0.9);
     }
 
     body {
@@ -16,30 +26,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-
-      background-color: #2d6a2d;
-      background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' mode='multiply'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E"),
-        repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 2px,
-          rgba(0, 0, 0, 0.04) 2px,
-          rgba(0, 0, 0, 0.04) 3px
-        ),
-        repeating-linear-gradient(
-          90deg,
-          transparent,
-          transparent 2px,
-          rgba(0, 0, 0, 0.04) 2px,
-          rgba(0, 0, 0, 0.04) 3px
-        ),
-        radial-gradient(
-          ellipse at center,
-          #3a7d34 0%,
-          #255225 60%,
-          #1b3d1b 100%
-        );
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(ellipse at 50% 35%, rgba(28,75,28,0.55) 0%, transparent 65%),
+        radial-gradient(ellipse at center, #0d1a0e 0%, #070c08 100%);
     }
 
     body::after {
@@ -47,11 +37,7 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      background: radial-gradient(
-        ellipse at center,
-        transparent 50%,
-        rgba(0, 0, 0, 0.45) 100%
-      );
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
     }
 
     .carte {
@@ -61,93 +47,97 @@
       flex-direction: column;
       align-items: center;
       gap: 1.8rem;
-      background: rgba(0, 0, 0, 0.28);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
       padding: 3rem 3.5rem;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
       min-width: 380px;
       text-align: center;
+      animation: fadeUp 0.5s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     h1 {
-      font-family: Georgia, serif;
-      font-size: 2.2rem;
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
       letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.85);
-      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      color: var(--gold);
       user-select: none;
     }
 
     .separateur {
-      width: 60%;
+      width: 50%;
       border: none;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-top: 1px solid rgba(255,255,255,0.07);
     }
 
     .info-bloc {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.5rem;
+      align-items: center;
     }
 
     .info-label {
-      font-family: Georgia, serif;
-      font-size: 0.75rem;
+      font-size: 0.65rem;
+      font-weight: 500;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.35);
+      color: var(--text-dim);
       user-select: none;
     }
 
     .info-valeur {
-      font-family: Georgia, serif;
-      font-size: 1.5rem;
-      letter-spacing: 0.3em;
-      color: rgba(255, 255, 255, 0.85);
+      font-size: 1.4rem;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      color: var(--text);
       user-select: none;
     }
 
     .code-cases {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
       justify-content: center;
     }
 
     .code-case {
-      width: 2.4rem;
-      height: 3rem;
+      width: 2.2rem;
+      height: 2.8rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: Georgia, serif;
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: rgba(255, 255, 255, 0.85);
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(180, 255, 180, 0.3);
-      border-radius: 5px;
-      letter-spacing: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--gold);
+      background: rgba(212,168,67,0.08);
+      border: 1px solid rgba(212,168,67,0.25);
+      border-radius: 8px;
     }
 
     .attente {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.8rem;
+      gap: 1rem;
     }
 
     .attente .texte {
-      font-family: Georgia, serif;
-      font-size: 0.85rem;
+      font-size: 0.72rem;
+      font-weight: 400;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--text-dim);
     }
 
-    /* Indicateurs joueurs connectés */
     .joueurs-grille {
       display: flex;
       gap: 0.6rem;
@@ -156,42 +146,46 @@
     }
 
     .joueur-jeton {
-      width: 2.8rem;
-      height: 2.8rem;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      background: rgba(0, 0, 0, 0.3);
+      min-width: 3rem;
+      padding: 0.4rem 0.6rem;
+      height: auto;
+      min-height: 3rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.25);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: Georgia, serif;
-      font-size: 0.75rem;
-      color: rgba(255, 255, 255, 0.3);
-      transition: background 0.3s, border-color 0.3s, color 0.3s;
+      gap: 0.15rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.25);
+      transition: all 0.3s ease;
     }
 
     .joueur-jeton.connecte {
-      background: rgba(100, 200, 100, 0.2);
-      border-color: rgba(150, 255, 150, 0.5);
-      color: rgba(180, 255, 180, 0.85);
+      background: rgba(212,168,67,0.08);
+      border-color: rgba(212,168,67,0.3);
+      color: var(--gold);
     }
 
-    /* Animation de pulsation pour l'attente */
     @keyframes pulse {
-      0%, 100% { opacity: 0.4; }
-      50%       { opacity: 1;   }
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50%       { opacity: 1;   transform: scale(1); }
     }
 
     .point-attente {
       display: inline-flex;
-      gap: 0.3rem;
+      gap: 0.35rem;
+      align-items: center;
     }
 
     .point-attente span {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.4);
+      background: var(--gold-dim);
       animation: pulse 1.4s ease-in-out infinite;
     }
 
@@ -199,31 +193,24 @@
     .point-attente span:nth-child(3) { animation-delay: 0.4s; }
 
     .retour-lien {
-      font-family: Georgia, serif;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
+      font-weight: 400;
       letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.25);
+      color: var(--text-dim);
       text-decoration: none;
       transition: color 0.2s;
-      margin-top: 0.5rem;
+      margin-top: 0.3rem;
     }
 
-    .retour-lien:hover {
-      color: rgba(255, 255, 255, 0.55);
-    }
+    .retour-lien:hover { color: var(--text); }
 
-    /* Page d'erreur si paramètres manquants */
     .erreur-page {
-      font-family: Georgia, serif;
-      color: rgba(255, 120, 120, 0.8);
-      font-size: 0.95rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      font-size: 0.85rem;
+      color: var(--error);
       text-align: center;
     }
 
-    /* ── Overlay saisie du pseudo ── */
+    /* ── Overlay pseudo ── */
     .pseudo-overlay {
       position: fixed;
       inset: 0;
@@ -231,8 +218,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
       transition: opacity 0.3s;
     }
 
@@ -245,31 +232,31 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1.5rem;
-      background: rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 12px;
+      gap: 1.4rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
       padding: 2.5rem 3rem;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
       min-width: 320px;
+      animation: fadeUp 0.4s cubic-bezier(.22,1,.36,1) both;
     }
 
     .pseudo-carte h2 {
-      font-family: Georgia, serif;
-      font-size: 1.4rem;
+      font-family: 'Cinzel', serif;
+      font-size: 1.3rem;
+      font-weight: 600;
       letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.85);
+      color: var(--gold);
       user-select: none;
     }
 
     .pseudo-carte p {
-      font-family: Georgia, serif;
-      font-size: 0.8rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.4);
+      font-size: 0.73rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
       text-align: center;
       user-select: none;
     }
@@ -281,85 +268,83 @@
 
     .pseudo-input {
       width: 100%;
-      font-family: Georgia, serif;
-      font-size: 1.3rem;
-      letter-spacing: 0.1em;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 500;
       text-align: center;
-      color: rgba(255,255,255,0.9);
+      color: var(--text);
       background: rgba(0,0,0,0.4);
-      border: 2px solid rgba(255,255,255,0.25);
-      border-radius: 7px;
-      padding: 0.65rem 2.5rem 0.65rem 1rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 0.75rem 2.5rem 0.75rem 1rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .pseudo-input:focus { border-color: rgba(255,255,255,0.7); }
-    .pseudo-input.erreur-input { border-color: rgba(255,100,100,0.7); }
+    .pseudo-input:focus {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .pseudo-input.erreur-input {
+      border-color: rgba(240,100,100,0.6);
+      box-shadow: 0 0 0 3px rgba(240,100,100,0.12);
+    }
 
     .pseudo-compteur {
       position: absolute;
-      right: 8px;
+      right: 10px;
       top: 50%;
       transform: translateY(-50%);
-      font-family: Georgia, serif;
-      font-size: 0.7rem;
-      color: rgba(255,255,255,0.25);
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.2);
       pointer-events: none;
     }
 
     .pseudo-erreur {
-      font-family: Georgia, serif;
-      font-size: 0.78rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(255,110,110,0.85);
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--error);
       min-height: 1em;
       text-align: center;
     }
 
     .pseudo-btn {
-      font-family: Georgia, serif;
-      font-size: 0.9rem;
-      letter-spacing: 0.12em;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
-      padding: 0.7rem 2rem;
-      border: 2px solid rgba(255,255,255,0.5);
-      border-radius: 6px;
-      background: rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.85);
+      padding: 0.9rem 2rem;
+      border-radius: 60px;
+      background: var(--gold);
+      border: none;
+      color: #1c1000;
       cursor: pointer;
-      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+      transition: all 0.22s ease;
+      width: 100%;
+      box-shadow: 0 4px 20px var(--gold-glow);
     }
 
     .pseudo-btn:hover {
-      background: rgba(255,255,255,0.2);
-      border-color: rgba(255,255,255,0.8);
+      background: #e0b84d;
       transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(212,168,67,0.4);
     }
 
     .pseudo-btn:active { transform: translateY(0); }
 
-    /* Jeton avec pseudo */
-    .joueur-jeton {
-      flex-direction: column;
-      gap: 0.15rem;
-      width: auto;
-      min-width: 2.8rem;
-      padding: 0 0.4rem;
-      height: auto;
-      min-height: 2.8rem;
-    }
-
     .jeton-pseudo {
-      font-size: 0.6rem;
-      letter-spacing: 0.05em;
+      font-size: 0.65rem;
+      font-weight: 500;
       max-width: 70px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       display: none;
     }
+
+    .jeton-num { font-size: 0.8rem; font-weight: 400; }
 
     .joueur-jeton.connecte .jeton-pseudo { display: block; }
     .joueur-jeton.connecte .jeton-num    { display: none; }
