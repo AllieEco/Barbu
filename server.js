@@ -141,7 +141,8 @@ io.on('connection', socket => {
         contrat:       1,   // 1=plis(×4) 2=cœurs(×6) 3=dames(×12) 4=roi de cœur(52)
         scoresC1:      null,
         scoresC2:      null,
-        scoresC3:      null
+        scoresC3:      null,
+        damesPrises:   0    // compteur pour fermeture anticipée du contrat 3
       };
 
       setTimeout(() => {
@@ -236,6 +237,7 @@ io.on('connection', socket => {
       } else if (jeu.contrat === 3) {
         const nbDames = jeu.pliActuel.filter(e => e.carte.rank === 'Q').length;
         pointsPli = nbDames * 12;
+        jeu.damesPrises += nbDames;
       } else {
         // Contrat 4 : le roi de cœur vaut 52 points, ferme le contrat
         roiCoeurPris = jeu.pliActuel.some(e => e.carte.rank === 'K' && e.carte.suit === '♥');
@@ -248,10 +250,11 @@ io.on('connection', socket => {
       jeu.joueurCourant = gagnant;
       console.log(`[Jeu] ${code} C${jeu.contrat}: pli → ${jeu.pseudos[gagnant]} +${pointsPli} pts (total ${jeu.scores[gagnant]})`);
 
-      // Le contrat 4 se ferme dès que le roi est pris (même si des cartes restent)
-      const finContrat = (jeu.contrat === 4)
-        ? roiCoeurPris || jeu.mains[0].length === 0
-        : jeu.mains[0].length === 0;
+      // Conditions de fermeture anticipée selon le contrat
+      const finContrat =
+        jeu.contrat === 3 ? jeu.damesPrises >= 4 || jeu.mains[0].length === 0 :
+        jeu.contrat === 4 ? roiCoeurPris           || jeu.mains[0].length === 0 :
+        jeu.mains[0].length === 0;
 
       setTimeout(() => {
         io.to(code).emit('pli_termine', { gagnant, scores: jeu.scores, pointsPli });
@@ -311,6 +314,7 @@ io.on('connection', socket => {
 
                 jeu.mains         = nouvellesMains;
                 jeu.contrat       = 3;
+                jeu.damesPrises   = 0;
                 jeu.pliActuel     = [];
                 jeu.suitePli      = null;
                 jeu.joueurCourant = joueurCommence;
