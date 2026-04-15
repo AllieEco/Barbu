@@ -540,6 +540,10 @@
     scene.style.width  = SCENE_W + 'px';
     scene.style.height = SCENE_H + 'px';
 
+    // Récupérer les pseudos sauvegardés depuis la salle d'attente
+    const pseudos = JSON.parse(sessionStorage.getItem('barbu_pseudos') || '[]');
+    const nomJoueur = i => pseudos[i] || `Joueur ${i + 1}`;
+
     const piles = [];
 
     for (let i = 0; i < nbJoueurs; i++) {
@@ -547,6 +551,7 @@
       const x        = SCENE_W / 2 + ORBIT_RX * Math.cos(angle);
       const y        = SCENE_H / 2 + ORBIT_RY * Math.sin(angle);
       const estLocal = i === 0;
+      const label    = estLocal ? (pseudos[0] || 'Vous') : nomJoueur(i);
 
       const pile = document.createElement('div');
       pile.className = 'pile' + (estLocal ? ' pile-locale' : '');
@@ -559,7 +564,7 @@
           <div class="carte-dos"></div>
           <div class="carte-dos"></div>
         </div>
-        <div class="pile-label">${estLocal ? 'Vous' : 'Joueur ' + (i + 1)}</div>
+        <div class="pile-label">${label}</div>
         <div class="pile-count">${parJoueur} carte${parJoueur > 1 ? 's' : ''}</div>`;
 
       if (estLocal) pile.addEventListener('click', ouvrirMain);
@@ -568,8 +573,8 @@
       piles.push(pile);
     }
 
-    // ── Tirage au sort du joueur qui commence ────────────────────────
-    const joueurChoisi = Math.floor(Math.random() * nbJoueurs);
+    // ── Joueur qui commence (décidé par le serveur, identique pour tous) ──
+    const joueurChoisi = parseInt(sessionStorage.getItem('barbu_joueur_commence') ?? Math.floor(Math.random() * nbJoueurs), 10);
     const annonce = document.getElementById('tableAnnonce');
     let tours = 0;
     const totalTours = nbJoueurs * 3 + joueurChoisi;
@@ -587,7 +592,7 @@
       } else {
         piles[joueurChoisi].querySelector('.pile-label')
           .insertAdjacentHTML('afterend', '<div class="badge-commence">Commence</div>');
-        const nom = joueurChoisi === 0 ? 'Vous ouvrez' : `Joueur ${joueurChoisi + 1} ouvre`;
+        const nom = joueurChoisi === 0 ? `${pseudos[0] || 'Vous'} ouvre` : `${nomJoueur(joueurChoisi)} ouvre`;
         annonce.textContent = `${nom} la partie`;
       }
     }

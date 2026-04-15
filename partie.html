@@ -501,10 +501,11 @@
         });
 
         // Tous connectés → lancement
-        socket.on('tous_connectes', ({ code: c, joueurs: nb, pseudos }) => {
+        socket.on('tous_connectes', ({ code: c, joueurs: nb, pseudos, joueurCommence }) => {
           document.getElementById('texteAttente').textContent = 'Tous les joueurs sont connectés !';
           document.getElementById('pointsAttente').style.display = 'none';
           sessionStorage.setItem('barbu_pseudos', JSON.stringify(pseudos));
+          sessionStorage.setItem('barbu_joueur_commence', joueurCommence);
           setTimeout(() => {
             window.location.href = `jeu.html?code=${c}&joueurs=${nb}`;
           }, 800);

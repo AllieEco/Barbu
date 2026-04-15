@@ -76,8 +76,10 @@ io.on('connection', socket => {
     // Tous connectés → on lance la partie
     if (p.connectes === p.joueurs) {
       console.log(`[Partie] ${code} : complète → lancement !`);
+      const joueurCommence = Math.floor(Math.random() * p.joueurs);
+      console.log(`[Partie] ${code} : commence → ${p.pseudos[joueurCommence]}`);
       setTimeout(() => {
-        io.to(code).emit('tous_connectes', { code, joueurs: p.joueurs, pseudos: p.pseudos });
+        io.to(code).emit('tous_connectes', { code, joueurs: p.joueurs, pseudos: p.pseudos, joueurCommence });
         delete parties[code];
       }, 1000);
     }
